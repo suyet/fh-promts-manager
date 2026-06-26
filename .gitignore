@@ -3,6 +3,7 @@
 
 # Generated outputs
 output/
+*.log
 
 # Python
 __pycache__/
