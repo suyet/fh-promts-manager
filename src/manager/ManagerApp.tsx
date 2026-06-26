@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { TopBar } from "../shared/components/TopBar";
 import { repositories } from "../shared/data/repositories";
 import { diffService, type VersionDiff } from "../shared/services/diffService";
+import { copyText } from "../shared/services/clipboardService";
 import { promptService } from "../shared/services/promptService";
 import "../shared/styles/app.css";
 import type { ImportPreview, PromptVersion, PromptWithLatest, Scene } from "../shared/types";
@@ -62,6 +63,14 @@ export function ManagerApp() {
     setView("diff");
   }
 
+  async function copyPrompt(promptId: string, source: "manager" | "diff" = "manager") {
+    const item = items.find((candidate) => candidate.prompt.id === promptId);
+    if (!item) return;
+    await copyText(item.latestVersion.content);
+    await promptService.recordUsage(item.prompt.id, item.latestVersion.id, source);
+    await promptService.searchPrompts({ text: search, sceneId: selectedSceneId || undefined }).then(setItems);
+  }
+
   let page = (
     <LibraryPage
       scenes={scenes}
@@ -69,7 +78,9 @@ export function ManagerApp() {
       prompts={items}
       onSelectScene={setSelectedSceneId}
       onOpenPrompt={openPrompt}
-      onCopyPrompt={() => undefined}
+      onCopyPrompt={(promptId) => {
+        void copyPrompt(promptId);
+      }}
       onCreatePrompt={() => setView("detail")}
     />
   );
@@ -80,7 +91,9 @@ export function ManagerApp() {
         item={selectedItem}
         versions={versions}
         onBack={() => setView("library")}
-        onCopyLatest={() => undefined}
+        onCopyLatest={() => {
+          void copyPrompt(selectedItem.prompt.id);
+        }}
         onDelete={() => undefined}
         onSaveVersion={(content) => {
           void promptService.saveNewVersion(selectedItem.prompt.id, { content, note: "手动保存" }).then(() => {
@@ -97,7 +110,9 @@ export function ManagerApp() {
         diff={diff}
         onBack={() => setView("detail")}
         onCopyHistory={() => undefined}
-        onCopyLatest={() => undefined}
+        onCopyLatest={() => {
+          if (selectedItem) void copyPrompt(selectedItem.prompt.id, "diff");
+        }}
       />
     );
   } else if (view === "import") {
