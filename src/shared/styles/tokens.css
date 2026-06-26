@@ -1,0 +1,19 @@
+:root {
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --panel-soft: #fbfdff;
+  --line: #e3e9f2;
+  --line-strong: #d7e0ef;
+  --text: #182232;
+  --muted: #64748b;
+  --blue: #2563eb;
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --red: #dc2626;
+  --red-bg: #fef2f2;
+  --green: #16a34a;
+  --green-bg: #ecfdf3;
+  --radius: 8px;
+  --topbar: 68px;
+  font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+}
