@@ -11,15 +11,18 @@ function PopupBootstrap() {
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [recent, setRecent] = useState<PromptWithLatest[]>([]);
   const [matches, setMatches] = useState<PromptWithLatest[]>([]);
+  const [search, setSearch] = useState("");
+  const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
 
-  async function refresh(search = "") {
-    const [loadedScenes, loadedMatches] = await Promise.all([
+  async function refresh(nextSearch = search, nextSceneId = selectedSceneId) {
+    const [loadedScenes, loadedMatches, recentCandidates] = await Promise.all([
       repositories.scenes.list(),
-      promptService.searchPrompts({ text: search })
+      promptService.searchPrompts({ text: nextSearch, sceneId: nextSceneId || undefined }),
+      promptService.searchPrompts({ text: "", sceneId: nextSceneId || undefined })
     ]);
     setScenes(loadedScenes);
     setMatches(loadedMatches);
-    setRecent(loadedMatches.filter((item) => item.prompt.lastUsedAt).slice(0, 5));
+    setRecent(recentCandidates.filter((item) => item.prompt.lastUsedAt).slice(0, 5));
   }
 
   useEffect(() => {
@@ -40,7 +43,12 @@ function PopupBootstrap() {
       recent={recent}
       matches={matches}
       onSearch={(value) => {
+        setSearch(value);
         void refresh(value);
+      }}
+      onSelectScene={(sceneId) => {
+        setSelectedSceneId(sceneId);
+        void refresh(search, sceneId);
       }}
       onCopy={(promptId) => {
         void handleCopy(promptId);

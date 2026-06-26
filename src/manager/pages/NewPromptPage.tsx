@@ -8,9 +8,11 @@ export function NewPromptPage({
   onSave
 }: {
   onBack: () => void;
-  onSave: (input: { title: string; content: string }) => void;
+  onSave: (input: { title: string; description: string; tags: string[]; content: string }) => void;
 }) {
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [tags, setTags] = useState("");
   const [content, setContent] = useState("");
 
   return (
@@ -25,12 +27,25 @@ export function NewPromptPage({
         <div className="new-prompt-form">
           <label className="field">
             <span>Prompt 标题</span>
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
+            <input aria-label="Prompt 标题" value={title} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <label className="field">
+            <span>Prompt 描述</span>
+            <textarea aria-label="Prompt 描述" value={description} onChange={(event) => setDescription(event.target.value)} />
+          </label>
+          <label className="field">
+            <span>标签</span>
+            <input aria-label="标签" value={tags} onChange={(event) => setTags(event.target.value)} />
           </label>
           <PromptEditor
             content={content}
             onChange={setContent}
-            onSave={() => onSave({ title, content })}
+            onSave={() => onSave({
+              title,
+              description,
+              tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+              content
+            })}
             onDownload={() => undefined}
             onCopy={() => undefined}
           />

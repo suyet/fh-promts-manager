@@ -80,6 +80,24 @@ export const promptService = {
     return updated;
   },
 
+  async updatePrompt(
+    promptId: string,
+    input: { title: string; description: string; tags: string[]; favorite: boolean }
+  ): Promise<Prompt> {
+    const prompt = await repositories.prompts.get(promptId);
+    if (!prompt) throw new Error("Prompt not found.");
+    const updated: Prompt = {
+      ...prompt,
+      title: input.title,
+      description: input.description,
+      tags: input.tags,
+      favorite: input.favorite,
+      updatedAt: now()
+    };
+    await repositories.prompts.put(updated);
+    return updated;
+  },
+
   async searchPrompts(query: PromptSearchQuery): Promise<PromptWithLatest[]> {
     const text = query.text.trim().toLowerCase();
     const [prompts, scenes] = await Promise.all([repositories.prompts.list(), repositories.scenes.list()]);
@@ -106,5 +124,9 @@ export const promptService = {
       await db.usageRecords.put({ id: id(), promptId, versionId, usedAt: timestamp, source });
       await db.prompts.put({ ...prompt, lastUsedAt: timestamp, updatedAt: timestamp });
     });
+  },
+
+  async deletePrompt(promptId: string) {
+    await repositories.prompts.deleteWithVersions(promptId);
   }
 };

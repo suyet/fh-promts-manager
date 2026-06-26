@@ -21,6 +21,7 @@ describe("LibraryPage", () => {
         onCreateScene={vi.fn()}
         onEditScene={vi.fn()}
         onDeleteScene={vi.fn()}
+        onMoveScene={vi.fn()}
       />
     );
 
@@ -49,6 +50,7 @@ describe("LibraryPage", () => {
         onCreateScene={onCreateScene}
         onEditScene={onEditScene}
         onDeleteScene={onDeleteScene}
+        onMoveScene={vi.fn()}
       />
     );
 
@@ -63,5 +65,32 @@ describe("LibraryPage", () => {
     expect(onCreateScene).toHaveBeenCalledTimes(1);
     expect(onEditScene).toHaveBeenCalledWith("scene-code");
     expect(onDeleteScene).toHaveBeenCalledWith("scene-code");
+  });
+
+  it("renders scene sorting controls", async () => {
+    const user = userEvent.setup();
+    const onMoveScene = vi.fn();
+
+    render(
+      <LibraryPage
+        scenes={[sceneFactory()]}
+        selectedSceneId="scene-code"
+        prompts={[]}
+        onSelectScene={vi.fn()}
+        onOpenPrompt={vi.fn()}
+        onCopyPrompt={vi.fn()}
+        onCreatePrompt={vi.fn()}
+        onCreateScene={vi.fn()}
+        onEditScene={vi.fn()}
+        onDeleteScene={vi.fn()}
+        onMoveScene={onMoveScene}
+      />
+    );
+
+    await user.click(screen.getByLabelText("上移场景：代码重构"));
+    await user.click(screen.getByLabelText("下移场景：代码重构"));
+
+    expect(onMoveScene).toHaveBeenCalledWith("scene-code", "up");
+    expect(onMoveScene).toHaveBeenCalledWith("scene-code", "down");
   });
 });

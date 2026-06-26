@@ -1,4 +1,4 @@
-import { BarChart3, Briefcase, Code2, Image, PenLine, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, BarChart3, Briefcase, Code2, Image, PenLine, Pencil, Plus, Trash2 } from "lucide-react";
 import { SCENE_COLORS } from "../constants";
 import type { Scene, SceneIcon } from "../types";
 import { IconButton } from "./IconButton";
@@ -18,7 +18,8 @@ export function SceneList({
   onSelect,
   onCreate,
   onEdit,
-  onDelete
+  onDelete,
+  onMove
 }: {
   scenes: Scene[];
   activeSceneId: string | null;
@@ -27,6 +28,7 @@ export function SceneList({
   onCreate: () => void;
   onEdit: (sceneId: string) => void;
   onDelete: (sceneId: string) => void;
+  onMove: (sceneId: string, direction: "up" | "down") => void;
 }) {
   return (
     <>
@@ -50,6 +52,8 @@ export function SceneList({
                 <strong className="count-badge">{counts[scene.id] ?? 0}</strong>
               </button>
               <div className="scene-actions">
+                <IconButton label={`上移场景：${scene.name}`} icon={<ArrowUp className="icon" />} onClick={() => onMove(scene.id, "up")} />
+                <IconButton label={`下移场景：${scene.name}`} icon={<ArrowDown className="icon" />} onClick={() => onMove(scene.id, "down")} />
                 <IconButton label={`编辑场景：${scene.name}`} icon={<Pencil className="icon" />} onClick={() => onEdit(scene.id)} />
                 <IconButton label={`删除场景：${scene.name}`} icon={<Trash2 className="icon" />} onClick={() => onDelete(scene.id)} />
               </div>

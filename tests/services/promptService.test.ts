@@ -53,4 +53,37 @@ describe("promptService", () => {
     await expect(promptService.searchPrompts({ text: "边界行为" })).resolves.toHaveLength(1);
     await expect(promptService.searchPrompts({ text: "不存在" })).resolves.toHaveLength(0);
   });
+
+  it("updates prompt metadata without storing prompt content", async () => {
+    await repositories.scenes.put(sceneFactory());
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory());
+
+    const updated = await promptService.updatePrompt("prompt-refactor", {
+      title: "Updated title",
+      description: "Updated desc",
+      tags: ["updated"],
+      favorite: false
+    });
+
+    expect(updated.title).toBe("Updated title");
+    expect(updated.tags).toEqual(["updated"]);
+    expect("content" in updated).toBe(false);
+    await expect(repositories.versions.listByPrompt("prompt-refactor")).resolves.toHaveLength(1);
+  });
+
+  it("records usage and deletes prompt versions and usage together", async () => {
+    await repositories.scenes.put(sceneFactory());
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory());
+
+    await promptService.recordUsage("prompt-refactor", "version-1", "manager");
+    await expect(repositories.usageRecords.listRecent(10)).resolves.toHaveLength(1);
+
+    await promptService.deletePrompt("prompt-refactor");
+
+    await expect(repositories.prompts.get("prompt-refactor")).resolves.toBeUndefined();
+    await expect(repositories.versions.listByPrompt("prompt-refactor")).resolves.toEqual([]);
+    await expect(repositories.usageRecords.listRecent(10)).resolves.toEqual([]);
+  });
 });

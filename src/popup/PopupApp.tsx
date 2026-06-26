@@ -8,6 +8,7 @@ export function PopupApp({
   recent,
   matches,
   onSearch,
+  onSelectScene,
   onCopy,
   onOpenManager
 }: {
@@ -15,6 +16,7 @@ export function PopupApp({
   recent: PromptWithLatest[];
   matches: PromptWithLatest[];
   onSearch: (value: string) => void;
+  onSelectScene: (sceneId: string | null) => void;
   onCopy: (promptId: string) => void;
   onOpenManager: () => void;
 }) {
@@ -29,8 +31,8 @@ export function PopupApp({
         <input onChange={(event) => onSearch(event.target.value)} placeholder="搜索 Prompt" />
       </label>
       <div className="scene-filters">
-        <button>全部</button>
-        {scenes.map((scene) => <button key={scene.id}>{scene.name}</button>)}
+        <button onClick={() => onSelectScene(null)}>全部</button>
+        {scenes.map((scene) => <button key={scene.id} onClick={() => onSelectScene(scene.id)}>{scene.name}</button>)}
       </div>
       <PromptList title="最近使用" items={recent} onCopy={onCopy} />
       <PromptList title="匹配结果" items={matches} onCopy={onCopy} />

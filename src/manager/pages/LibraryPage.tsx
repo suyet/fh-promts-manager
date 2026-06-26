@@ -15,7 +15,8 @@ export function LibraryPage({
   onCreatePrompt,
   onCreateScene,
   onEditScene,
-  onDeleteScene
+  onDeleteScene,
+  onMoveScene
 }: {
   scenes: Scene[];
   selectedSceneId: string | null;
@@ -27,6 +28,7 @@ export function LibraryPage({
   onCreateScene: () => void;
   onEditScene: (sceneId: string) => void;
   onDeleteScene: (sceneId: string) => void;
+  onMoveScene: (sceneId: string, direction: "up" | "down") => void;
 }) {
   const selectedScene = scenes.find((scene) => scene.id === selectedSceneId) || scenes[0];
   const counts = useMemo(() => {
@@ -48,6 +50,7 @@ export function LibraryPage({
             onCreate={onCreateScene}
             onEdit={onEditScene}
             onDelete={onDeleteScene}
+            onMove={onMoveScene}
           />
         </aside>
         <section className="workbench">
