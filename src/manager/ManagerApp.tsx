@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { TopBar } from "../shared/components/TopBar";
+import { db } from "../shared/data/db";
 import { repositories } from "../shared/data/repositories";
 import { diffService, type VersionDiff } from "../shared/services/diffService";
 import { copyText } from "../shared/services/clipboardService";
@@ -9,6 +10,7 @@ import type { ImportPreview, PromptVersion, PromptWithLatest, Scene } from "../s
 import { DiffPage } from "./pages/DiffPage";
 import { ImportPage } from "./pages/ImportPage";
 import { LibraryPage } from "./pages/LibraryPage";
+import { NewPromptPage } from "./pages/NewPromptPage";
 import { PromptDetailPage } from "./pages/PromptDetailPage";
 import type { ManagerView } from "./routes";
 
@@ -24,10 +26,7 @@ export function ManagerApp() {
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
 
   useEffect(() => {
-    void repositories.scenes.list().then((loadedScenes) => {
-      setScenes(loadedScenes);
-      setSelectedSceneId(loadedScenes[0]?.id || null);
-    });
+    void loadScenes();
   }, []);
 
   useEffect(() => {
@@ -42,8 +41,17 @@ export function ManagerApp() {
     void repositories.versions.listByPrompt(selectedPromptId).then(setVersions);
   }, [selectedPromptId]);
 
-  const activeView = useMemo(() => view, [view]);
   const selectedItem = items.find((item) => item.prompt.id === selectedPromptId) ?? null;
+
+  async function loadScenes(preferredSceneId?: string | null) {
+    const loadedScenes = await repositories.scenes.list();
+    setScenes(loadedScenes);
+    setSelectedSceneId((current) => {
+      if (preferredSceneId !== undefined) return preferredSceneId;
+      if (current && loadedScenes.some((scene) => scene.id === current)) return current;
+      return loadedScenes[0]?.id || null;
+    });
+  }
 
   function openPrompt(promptId: string) {
     setSelectedPromptId(promptId);
@@ -71,6 +79,76 @@ export function ManagerApp() {
     await promptService.searchPrompts({ text: search, sceneId: selectedSceneId || undefined }).then(setItems);
   }
 
+  async function createScene() {
+    const name = window.prompt("场景名称");
+    if (!name?.trim()) return;
+    const description = window.prompt("场景摘要", "") ?? "";
+    const timestamp = new Date().toISOString();
+    const scene: Scene = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      description: description.trim(),
+      icon: "briefcase",
+      color: "teal",
+      sortOrder: scenes.reduce((maximum, item) => Math.max(maximum, item.sortOrder), 0) + 1,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    await repositories.scenes.put(scene);
+    await loadScenes(scene.id);
+  }
+
+  async function editScene(sceneId: string) {
+    const scene = scenes.find((item) => item.id === sceneId);
+    if (!scene) return;
+    const name = window.prompt("场景名称", scene.name);
+    if (!name?.trim()) return;
+    const description = window.prompt("场景摘要", scene.description) ?? scene.description;
+    await repositories.scenes.put({
+      ...scene,
+      name: name.trim(),
+      description: description.trim(),
+      updatedAt: new Date().toISOString()
+    });
+    await loadScenes(sceneId);
+    await promptService.searchPrompts({ text: search, sceneId: selectedSceneId || undefined }).then(setItems);
+  }
+
+  async function deleteScene(sceneId: string) {
+    const scene = scenes.find((item) => item.id === sceneId);
+    if (!scene || !window.confirm(`删除场景“${scene.name}”及其 Prompt？`)) return;
+    const promptIds = (await repositories.prompts.listByScene(sceneId)).map((prompt) => prompt.id);
+    await db.transaction("rw", db.scenes, db.prompts, db.versions, db.usageRecords, async () => {
+      for (const promptId of promptIds) {
+        await db.prompts.delete(promptId);
+        await db.versions.where("promptId").equals(promptId).delete();
+        await db.usageRecords.where("promptId").equals(promptId).delete();
+      }
+      await db.scenes.delete(sceneId);
+    });
+    const nextSceneId = scenes.find((item) => item.id !== sceneId)?.id || null;
+    await loadScenes(nextSceneId);
+  }
+
+  async function createPrompt(input: { title: string; content: string }) {
+    const title = input.title.trim();
+    const content = input.content;
+    if (!title || !content.trim() || !selectedSceneId) return;
+    const prompt = await promptService.createPrompt({
+      sceneId: selectedSceneId,
+      title,
+      description: "",
+      tags: [],
+      favorite: false,
+      content,
+      note: "初始版本"
+    });
+    await promptService.searchPrompts({ text: search, sceneId: selectedSceneId }).then(setItems);
+    setSelectedPromptId(prompt.id);
+    setVersions(await repositories.versions.listByPrompt(prompt.id));
+    setView("detail");
+  }
+
   let page = (
     <LibraryPage
       scenes={scenes}
@@ -81,7 +159,19 @@ export function ManagerApp() {
       onCopyPrompt={(promptId) => {
         void copyPrompt(promptId);
       }}
-      onCreatePrompt={() => setView("detail")}
+      onCreatePrompt={() => {
+        setSelectedPromptId(null);
+        setView("create");
+      }}
+      onCreateScene={() => {
+        void createScene();
+      }}
+      onEditScene={(sceneId) => {
+        void editScene(sceneId);
+      }}
+      onDeleteScene={(sceneId) => {
+        void deleteScene(sceneId);
+      }}
     />
   );
 
@@ -102,6 +192,15 @@ export function ManagerApp() {
           });
         }}
         onCompareToLatest={compareToLatest}
+      />
+    );
+  } else if (view === "create") {
+    page = (
+      <NewPromptPage
+        onBack={() => setView("library")}
+        onSave={(input) => {
+          void createPrompt(input);
+        }}
       />
     );
   } else if (view === "diff" && diff) {
@@ -128,13 +227,11 @@ export function ManagerApp() {
   return (
     <>
       <TopBar
-        activeView={activeView}
         search={search}
         onSearch={(value) => {
           setSearch(value);
           setView("library");
         }}
-        onNavigate={setView}
         onImport={() => setView("import")}
         onExport={() => undefined}
       />

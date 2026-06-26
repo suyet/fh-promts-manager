@@ -1,1 +1,1 @@
-export type ManagerView = "library" | "detail" | "diff" | "import" | "popup";
+export type ManagerView = "library" | "create" | "detail" | "diff" | "import" | "popup";

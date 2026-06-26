@@ -18,13 +18,50 @@ describe("LibraryPage", () => {
         onOpenPrompt={onOpenPrompt}
         onCopyPrompt={onCopyPrompt}
         onCreatePrompt={vi.fn()}
+        onCreateScene={vi.fn()}
+        onEditScene={vi.fn()}
+        onDeleteScene={vi.fn()}
       />
     );
 
-    expect(screen.getByText("代码重构")).toBeInTheDocument();
+    expect(screen.getAllByText("代码重构").some((element) => element.classList.contains("scene-title"))).toBe(true);
     expect(screen.getByText("Code Refactor Helper")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "详情" })).not.toBeInTheDocument();
     await user.click(screen.getByLabelText("复制最新版本"));
     expect(onCopyPrompt).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders scene management controls and keeps scene metadata separated", async () => {
+    const user = userEvent.setup();
+    const onCreateScene = vi.fn();
+    const onEditScene = vi.fn();
+    const onDeleteScene = vi.fn();
+
+    render(
+      <LibraryPage
+        scenes={[sceneFactory()]}
+        selectedSceneId="scene-code"
+        prompts={[{ prompt: promptFactory(), latestVersion: versionFactory(), scene: sceneFactory() }]}
+        onSelectScene={vi.fn()}
+        onOpenPrompt={vi.fn()}
+        onCopyPrompt={vi.fn()}
+        onCreatePrompt={vi.fn()}
+        onCreateScene={onCreateScene}
+        onEditScene={onEditScene}
+        onDeleteScene={onDeleteScene}
+      />
+    );
+
+    expect(screen.getByText("场景")).toBeInTheDocument();
+    expect(screen.getAllByText("代码重构").find((element) => element.classList.contains("scene-title"))).toBeTruthy();
+    expect(screen.getByText("工程质量与 review")).toHaveClass("scene-desc");
+
+    await user.click(screen.getByLabelText("新建场景"));
+    await user.click(screen.getByLabelText("编辑场景：代码重构"));
+    await user.click(screen.getByLabelText("删除场景：代码重构"));
+
+    expect(onCreateScene).toHaveBeenCalledTimes(1);
+    expect(onEditScene).toHaveBeenCalledWith("scene-code");
+    expect(onDeleteScene).toHaveBeenCalledWith("scene-code");
   });
 });

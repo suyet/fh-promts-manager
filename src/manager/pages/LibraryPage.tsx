@@ -12,7 +12,10 @@ export function LibraryPage({
   onSelectScene,
   onOpenPrompt,
   onCopyPrompt,
-  onCreatePrompt
+  onCreatePrompt,
+  onCreateScene,
+  onEditScene,
+  onDeleteScene
 }: {
   scenes: Scene[];
   selectedSceneId: string | null;
@@ -21,6 +24,9 @@ export function LibraryPage({
   onOpenPrompt: (promptId: string) => void;
   onCopyPrompt: (promptId: string) => void;
   onCreatePrompt: () => void;
+  onCreateScene: () => void;
+  onEditScene: (sceneId: string) => void;
+  onDeleteScene: (sceneId: string) => void;
 }) {
   const selectedScene = scenes.find((scene) => scene.id === selectedSceneId) || scenes[0];
   const counts = useMemo(() => {
@@ -39,12 +45,15 @@ export function LibraryPage({
             activeSceneId={selectedScene?.id || null}
             counts={counts}
             onSelect={onSelectScene}
+            onCreate={onCreateScene}
+            onEdit={onEditScene}
+            onDelete={onDeleteScene}
           />
         </aside>
         <section className="workbench">
           <div className="page-head">
             <div>
-              <h1>{selectedScene ? `${selectedScene.name}资产库` : "资产库"}</h1>
+              <h1>{selectedScene ? selectedScene.name : "资产库"}</h1>
               <p>{prompts.length} 个 Prompt</p>
             </div>
             <div className="page-actions">
