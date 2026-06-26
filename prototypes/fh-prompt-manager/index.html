@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FH Prompt Manager 高保真原型</title>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --panel-2: #fbfdff;
+      --line: #e3e9f2;
+      --line-soft: #f0f4f8;
+      --text: #182232;
+      --muted: #64748b;
+      --muted-2: #94a3b8;
+      --blue: #2563eb;
+      --blue-50: #eff6ff;
+      --blue-100: #dbeafe;
+      --blue-700: #1d4ed8;
+      --green: #16a34a;
+      --green-bg: #ecfdf3;
+      --red: #dc2626;
+      --red-bg: #fef2f2;
+      --amber: #d97706;
+      --amber-bg: #fffbeb;
+      --shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+      --radius: 8px;
+      --topbar: 68px;
+      font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background: var(--bg);
+      font-size: 15px;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: var(--topbar);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 28px;
+      background: rgba(255,255,255,0.98);
+      border-bottom: 1px solid #d7e0ef;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 250px;
+      font-weight: 760;
+      color: #0f172a;
+      font-size: 17px;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: #0f172a;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .top-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid #d9e2ef;
+      background: #f6f9fd;
+      border-radius: 8px;
+    }
+
+    .top-search {
+      flex: 1 1 360px;
+      max-width: 520px;
+      min-width: 300px;
+    }
+
+    .top-search .search-box {
+      height: 40px;
+      background: #fff;
+    }
+
+    .tab {
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      border-radius: 6px;
+      color: #526178;
+      background: transparent;
+      white-space: nowrap;
+    }
+
+    .tab.active {
+      color: var(--blue);
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn,
+    .text-btn,
+    .primary-btn,
+    .ghost-btn,
+    .danger-btn {
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      transition: background .14s ease, border-color .14s ease, color .14s ease;
+      white-space: nowrap;
+    }
+
+    .icon-btn {
+      width: 38px;
+      color: var(--muted);
+      background: transparent;
+    }
+
+    .icon-btn:hover,
+    .ghost-btn:hover {
+      background: var(--panel-2);
+      border-color: var(--line);
+    }
+
+    .text-btn {
+      padding: 0 14px;
+      color: var(--muted);
+      background: #fff;
+      border-color: var(--line);
+    }
+
+    .primary-btn {
+      padding: 0 15px;
+      color: #fff;
+      background: var(--blue);
+    }
+
+    .primary-btn:hover { background: var(--blue-700); }
+
+    .ghost-btn {
+      padding: 0 13px;
+      color: var(--muted);
+      background: transparent;
+      border-color: transparent;
+    }
+
+    .danger-btn {
+      padding: 0 13px;
+      color: var(--red);
+      background: var(--red-bg);
+      border-color: #fecaca;
+    }
+
+    .icon {
+      width: 17px;
+      height: 17px;
+      stroke-width: 2;
+      flex: 0 0 auto;
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: 318px minmax(0, 1fr);
+      gap: 24px;
+      padding: 24px 28px 30px;
+      flex: 1;
+      min-height: calc(100vh - var(--topbar));
+    }
+
+    .sidebar,
+    .content-panel,
+    .detail-panel,
+    .editor-shell,
+    .right-panel {
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid #e1e8f2;
+      border-radius: var(--radius);
+      box-shadow: none;
+    }
+
+    .sidebar {
+      padding: 16px;
+      height: calc(100vh - var(--topbar) - 54px);
+      position: sticky;
+      top: calc(var(--topbar) + 18px);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      background: transparent;
+      border-color: transparent;
+    }
+
+    .side-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 2px 2px 0;
+    }
+
+    .section-title {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 760;
+      text-transform: uppercase;
+    }
+
+    .scene-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .local-note {
+      margin-top: auto;
+      padding: 12px 14px;
+      color: #475569;
+      border-top: 1px solid var(--line);
+    }
+
+    .scene-item {
+      min-height: 64px;
+      display: grid;
+      grid-template-columns: 42px 1fr auto;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 12px;
+      border-radius: 8px;
+      color: #334155;
+      background: transparent;
+      border: 1px solid transparent;
+    }
+
+    .scene-item.active {
+      color: #0f172a;
+      background: #eef5ff;
+      border-color: var(--blue-100);
+    }
+
+    .scene-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #fff;
+    }
+
+    .scene-meta {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .scene-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 16px;
+      font-weight: 720;
+    }
+
+    .scene-count,
+    .small-muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .count-badge {
+      min-width: 24px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      padding: 0 7px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 680;
+    }
+
+    .workbench {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .page-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      min-height: 52px;
+      padding: 0 2px;
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    .page-title {
+      font-size: 29px;
+      line-height: 1.2;
+      letter-spacing: 0;
+      font-weight: 780;
+      color: #0f172a;
+    }
+
+    .page-subtitle {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .search-box {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--muted);
+    }
+
+    .search-box input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+    }
+
+    .tag-filter {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chip {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: #fff;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .chip.active {
+      color: var(--blue);
+      background: var(--blue-50);
+      border-color: var(--blue-100);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .prompt-card {
+      min-height: 190px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px;
+      border: 1px solid #e1e8f2;
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: none;
+    }
+
+    .prompt-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .card-main {
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .card-icon-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 0 0 auto;
+    }
+
+    .card-title {
+      font-size: 17px;
+      line-height: 1.35;
+      font-weight: 760;
+      color: #0f172a;
+    }
+
+    .card-desc {
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      min-height: 25px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 8px;
+      border-radius: 999px;
+      color: #475569;
+      background: #f1f5f9;
+      font-size: 12px;
+    }
+
+    .card-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 14px;
+      min-height: calc(100vh - var(--topbar) - 112px);
+    }
+
+    .sub-header {
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid #e1e8f2;
+      border-radius: var(--radius);
+    }
+
+    .sub-left,
+    .sub-right,
+    .editor-title,
+    .diff-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .sub-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 18px;
+      font-weight: 780;
+      color: #0f172a;
+    }
+
+    .version-pill {
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 8px;
+      border-radius: 999px;
+      color: var(--blue);
+      background: var(--blue-50);
+      border: 1px solid var(--blue-100);
+      font-size: 12px;
+      font-weight: 720;
+      white-space: nowrap;
+    }
+
+    .editor-shell {
+      min-height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .editor-bar {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .editor-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 760;
+      color: #334155;
+    }
+
+    .code-editor {
+      flex: 1;
+      min-height: 560px;
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr);
+      background: #0f172a;
+      color: #dbeafe;
+      font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.72;
+    }
+
+    .line-nums {
+      padding: 22px 12px;
+      color: #64748b;
+      text-align: right;
+      border-right: 1px solid rgba(148, 163, 184, 0.16);
+      user-select: none;
+    }
+
+    .code-body {
+      margin: 0;
+      padding: 22px 24px;
+      white-space: pre-wrap;
+      overflow: auto;
+    }
+
+    .right-panel {
+      min-height: 100%;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .meta-group {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 78px minmax(0, 1fr);
+      gap: 8px;
+      align-items: start;
+      font-size: 14px;
+    }
+
+    .field-label {
+      color: var(--muted);
+    }
+
+    .field-value {
+      color: #243044;
+      min-width: 0;
+    }
+
+    .version-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .version-item {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .version-item.latest {
+      background: var(--blue-50);
+      border-color: var(--blue-100);
+    }
+
+    .version-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .version-no {
+      font-size: 14px;
+      font-weight: 760;
+      color: #0f172a;
+    }
+
+    .version-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .mini-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 9px;
+      flex-wrap: wrap;
+    }
+
+    .mini-btn {
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 0 8px;
+      border-radius: 6px;
+      color: var(--muted);
+      background: #fff;
+      border: 1px solid var(--line);
+      font-size: 12px;
+    }
+
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .diff-pane {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .diff-pane-head {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+      font-weight: 760;
+    }
+
+    .diff-code {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.68;
+    }
+
+    .diff-num {
+      padding: 10px 10px;
+      color: #94a3b8;
+      background: #f8fafc;
+      text-align: right;
+      border-right: 1px solid var(--line-soft);
+      user-select: none;
+    }
+
+    .diff-lines {
+      padding: 10px 0;
+      white-space: pre-wrap;
+      overflow: auto;
+    }
+
+    .diff-line {
+      padding: 0 12px;
+      min-height: 20px;
+    }
+
+    .diff-line.removed {
+      color: #991b1b;
+      background: var(--red-bg);
+    }
+
+    .diff-line.added {
+      color: #166534;
+      background: var(--green-bg);
+    }
+
+    .diff-line.same {
+      color: #334155;
+    }
+
+    .popup-preview {
+      width: 400px;
+      height: 650px;
+      margin: 0 auto;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .popup-head {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .popup-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .segmented {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .result-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .result-item {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .result-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 760;
+    }
+
+    .import-card {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .import-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .stat-card {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+    }
+
+    .stat-num {
+      font-size: 26px;
+      font-weight: 780;
+      color: #0f172a;
+    }
+
+    .stat-label {
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 40;
+      display: none;
+      align-items: center;
+      gap: 9px;
+      min-height: 42px;
+      padding: 0 14px;
+      border-radius: 8px;
+      color: #14532d;
+      background: var(--green-bg);
+      border: 1px solid #bbf7d0;
+      box-shadow: var(--shadow);
+      font-size: 13px;
+      font-weight: 680;
+    }
+
+    .toast.show { display: flex; }
+
+    .empty-state {
+      min-height: 260px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      color: var(--muted);
+      background: #fff;
+    }
+
+    @media (max-width: 1180px) {
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .detail-grid { grid-template-columns: minmax(0, 1fr); }
+      .right-panel { min-height: auto; }
+    }
+
+    @media (max-width: 1020px) {
+      .topbar { padding: 0 14px; }
+      .brand span { display: none; }
+      .top-tabs { overflow-x: auto; }
+      .topbar > .top-actions { display: none; }
+    }
+
+    @media (max-width: 860px) {
+      .main { grid-template-columns: 1fr; padding: 14px; }
+      .sidebar { position: static; height: auto; }
+      .toolbar { grid-template-columns: 1fr; }
+      .cards { grid-template-columns: 1fr; }
+      .diff-grid { grid-template-columns: 1fr; }
+      .sub-header { align-items: stretch; flex-direction: column; }
+      .sub-right { justify-content: flex-end; flex-wrap: wrap; }
+      .popup-preview { width: min(100%, 380px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">FH</div>
+        <span>FH Prompt Manager</span>
+      </div>
+      <nav class="top-tabs" aria-label="主导航">
+        <button class="tab active" data-view="library"><i data-lucide="layout-grid" class="icon"></i>资产库</button>
+        <button class="tab" data-view="popup"><i data-lucide="panel-top-open" class="icon"></i>Fast Use</button>
+      </nav>
+      <div class="top-search">
+        <label class="search-box">
+          <i data-lucide="search" class="icon"></i>
+          <input data-global-search placeholder="搜索标题、标签、正文" aria-label="全局搜索 Prompt" title="搜索范围：标题、标签、正文" />
+        </label>
+      </div>
+      <div class="top-actions">
+        <button class="text-btn" data-view-button="import"><i data-lucide="upload" class="icon"></i>导入</button>
+        <button class="text-btn" data-toast="已生成 JSON 备份"><i data-lucide="download" class="icon"></i>导出</button>
+        <button class="text-btn" data-toast="mailto:author@example.com"><i data-lucide="mail" class="icon"></i>联系作者</button>
+        <button class="icon-btn" title="切换明暗模式" data-toast="已切换显示模式"><i data-lucide="moon" class="icon"></i></button>
+      </div>
+    </header>
+
+    <main class="main">
+      <aside class="sidebar">
+        <div class="side-head">
+          <div class="section-title">场景</div>
+          <button class="icon-btn" title="新建场景" data-toast="已创建新场景"><i data-lucide="plus" class="icon"></i></button>
+        </div>
+
+        <div class="scene-list">
+          <button class="scene-item active">
+            <span class="scene-icon" style="background:#2563eb"><i data-lucide="code-2" class="icon"></i></span>
+            <span class="scene-meta"><span class="scene-name">代码重构</span><span class="scene-count">工程质量与 review</span></span>
+            <span class="count-badge">12</span>
+          </button>
+          <button class="scene-item">
+            <span class="scene-icon" style="background:#0f766e"><i data-lucide="pen-line" class="icon"></i></span>
+            <span class="scene-meta"><span class="scene-name">文案润色</span><span class="scene-count">语气、标题、短文案</span></span>
+            <span class="count-badge">8</span>
+          </button>
+          <button class="scene-item">
+            <span class="scene-icon" style="background:#7c3aed"><i data-lucide="bar-chart-3" class="icon"></i></span>
+            <span class="scene-meta"><span class="scene-name">数据分析</span><span class="scene-count">SQL、报告、归因</span></span>
+            <span class="count-badge">6</span>
+          </button>
+          <button class="scene-item">
+            <span class="scene-icon" style="background:#db2777"><i data-lucide="image" class="icon"></i></span>
+            <span class="scene-meta"><span class="scene-name">图像生成</span><span class="scene-count">风格、构图、素材</span></span>
+            <span class="count-badge">5</span>
+          </button>
+          <button class="scene-item">
+            <span class="scene-icon" style="background:#d97706"><i data-lucide="briefcase-business" class="icon"></i></span>
+            <span class="scene-meta"><span class="scene-name">业务分析</span><span class="scene-count">竞品、策略、总结</span></span>
+            <span class="count-badge">4</span>
+          </button>
+        </div>
+
+        <div class="local-note">
+          <div class="section-title">本地优先</div>
+          <p class="page-subtitle">IndexedDB · 离线可用 · JSON 备份</p>
+        </div>
+      </aside>
+
+      <section class="workbench">
+        <div id="library" class="view active">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">代码重构</h1>
+              <p class="page-subtitle">12 个 Prompt · 最新使用：今天 15:42</p>
+            </div>
+            <div class="top-actions">
+              <button class="text-btn" data-toast="排序已保存"><i data-lucide="arrow-up-down" class="icon"></i>排序</button>
+              <button class="primary-btn" data-toast="打开新建 Prompt 表单"><i data-lucide="plus" class="icon"></i>新建</button>
+            </div>
+          </div>
+
+          <div class="cards">
+            <article class="prompt-card" data-search="code refactor helper review cleanup safe-change 请重构下面的代码 不改变业务行为 风险说明 测试建议">
+              <div>
+                <div class="card-top">
+                  <div class="card-main" data-open-detail>
+                    <h2 class="card-title">Code Refactor Helper</h2>
+                    <p class="card-desc">用于要求模型在不改变行为的前提下重构代码，并解释潜在风险。</p>
+                  </div>
+                  <div class="card-icon-actions">
+                    <button class="icon-btn" title="已收藏"><i data-lucide="star" class="icon"></i></button>
+                    <button class="icon-btn" title="复制最新版本" data-toast="已复制最新版本"><i data-lucide="copy" class="icon"></i></button>
+                  </div>
+                </div>
+                <div class="tags" style="margin-top:12px;">
+                  <span class="tag">review</span><span class="tag">cleanup</span><span class="tag">safe-change</span>
+                </div>
+              </div>
+              <div>
+                <div class="card-meta"><span>v3 · 今天使用</span><span>代码重构</span></div>
+              </div>
+            </article>
+
+            <article class="prompt-card" data-search="review checklist review tests 代码审查 清单 正确性 边界条件 测试缺口">
+              <div>
+                <div class="card-top">
+                  <div class="card-main" data-open-detail>
+                    <h2 class="card-title">Review Checklist</h2>
+                    <p class="card-desc">生成代码审查清单，覆盖正确性、边界条件和测试缺口。</p>
+                  </div>
+                  <div class="card-icon-actions">
+                    <button class="icon-btn" title="收藏"><i data-lucide="star" class="icon"></i></button>
+                    <button class="icon-btn" title="复制最新版本" data-toast="已复制最新版本"><i data-lucide="copy" class="icon"></i></button>
+                  </div>
+                </div>
+                <div class="tags" style="margin-top:12px;">
+                  <span class="tag">review</span><span class="tag">tests</span>
+                </div>
+              </div>
+              <div>
+                <div class="card-meta"><span>v2 · 昨天使用</span><span>代码重构</span></div>
+              </div>
+            </article>
+
+            <article class="prompt-card" data-search="typescript migration typescript migration js ts 类型边界 最小行为变更">
+              <div>
+                <div class="card-top">
+                  <div class="card-main" data-open-detail>
+                    <h2 class="card-title">TypeScript Migration</h2>
+                    <p class="card-desc">把 JS 代码迁移到 TS，优先保证类型边界和最小行为变更。</p>
+                  </div>
+                  <div class="card-icon-actions">
+                    <button class="icon-btn" title="收藏"><i data-lucide="star" class="icon"></i></button>
+                    <button class="icon-btn" title="复制最新版本" data-toast="已复制最新版本"><i data-lucide="copy" class="icon"></i></button>
+                  </div>
+                </div>
+                <div class="tags" style="margin-top:12px;">
+                  <span class="tag">typescript</span><span class="tag">migration</span>
+                </div>
+              </div>
+              <div>
+                <div class="card-meta"><span>v5 · 上周使用</span><span>代码重构</span></div>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div id="detail" class="view">
+          <div class="sub-header">
+            <div class="sub-left">
+              <button class="icon-btn" title="返回资产库" data-back-library><i data-lucide="arrow-left" class="icon"></i></button>
+              <div class="sub-name">Code Refactor Helper</div>
+              <span class="version-pill">v3 Latest</span>
+            </div>
+            <div class="sub-right">
+              <button class="icon-btn" title="收藏"><i data-lucide="star" class="icon"></i></button>
+              <button class="danger-btn" data-toast="删除前需要确认"><i data-lucide="trash-2" class="icon"></i>删除</button>
+              <button class="primary-btn" data-toast="已复制最新版本"><i data-lucide="copy" class="icon"></i>复制</button>
+            </div>
+          </div>
+
+          <div class="detail-grid" style="margin-top:14px;">
+            <section class="editor-shell">
+              <div class="editor-bar">
+                <div class="editor-label"><i data-lucide="file-code-2" class="icon"></i>Prompt</div>
+                <div class="editor-title">
+                  <button class="primary-btn" data-toast="已保存为 v4"><i data-lucide="save" class="icon"></i>保存</button>
+                  <button class="text-btn" data-toast="已下载 Markdown 文件"><i data-lucide="download" class="icon"></i>下载</button>
+                  <button class="text-btn" data-toast="已复制编辑器内容"><i data-lucide="copy" class="icon"></i>复制</button>
+                </div>
+              </div>
+              <div class="code-editor">
+                <div class="line-nums">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11</div>
+                <pre class="code-body">请重构下面的代码，目标是提升可读性和可维护性。
+
+要求：
+- 不改变现有业务行为。
+- 优先减少重复逻辑，避免引入过度抽象。
+- 指出任何可能影响边界行为的修改。
+- 如果需要新增测试，请列出最小测试集。
+
+输出：
+1. 风险说明
+2. 重构后的代码
+3. 建议补充的测试</pre>
+              </div>
+            </section>
+
+            <aside class="right-panel">
+              <div class="meta-group">
+                <div class="section-title">详细信息</div>
+                <div class="field-row"><div class="field-label">场景</div><div class="field-value">代码重构</div></div>
+                <div class="field-row"><div class="field-label">标签</div><div class="field-value"><span class="tag">review</span> <span class="tag">cleanup</span></div></div>
+                <div class="field-row"><div class="field-label">收藏</div><div class="field-value">已收藏</div></div>
+                <div class="field-row"><div class="field-label">最近使用</div><div class="field-value">今天 15:42</div></div>
+                <div class="field-row"><div class="field-label">描述</div><div class="field-value">不改变行为的前提下重构代码，并提示风险。</div></div>
+              </div>
+
+              <div class="meta-group">
+                <div class="section-title">版本历史</div>
+                <div class="version-list">
+                  <div class="version-item latest">
+                    <div class="version-line"><span class="version-no">v3 Latest</span><span class="small-muted">今天</span></div>
+                    <div class="version-note">增加风险说明与测试建议输出。</div>
+                    <div class="mini-actions">
+                      <button class="mini-btn" data-toast="已复制 v3"><i data-lucide="copy" class="icon"></i>Copy</button>
+                    </div>
+                  </div>
+                  <div class="version-item">
+                    <div class="version-line"><span class="version-no">v2</span><span class="small-muted">昨天</span></div>
+                    <div class="version-note">补充“不改变业务行为”的约束。</div>
+                    <div class="mini-actions">
+                      <button class="mini-btn" data-open-diff><i data-lucide="git-compare" class="icon"></i>Compare to Latest</button>
+                      <button class="mini-btn" data-toast="已复制 v2"><i data-lucide="copy" class="icon"></i>Copy</button>
+                    </div>
+                  </div>
+                  <div class="version-item">
+                    <div class="version-line"><span class="version-no">v1</span><span class="small-muted">06-20</span></div>
+                    <div class="version-note">初始版本。</div>
+                    <div class="mini-actions">
+                      <button class="mini-btn" data-open-diff><i data-lucide="git-compare" class="icon"></i>Compare to Latest</button>
+                      <button class="mini-btn" data-toast="已复制 v1"><i data-lucide="copy" class="icon"></i>Copy</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div id="diff" class="view">
+          <div class="sub-header">
+            <div class="sub-left">
+              <button class="icon-btn" title="返回详情" data-back-detail><i data-lucide="arrow-left" class="icon"></i></button>
+              <div class="sub-name">Comparing v2 → v3 Latest</div>
+            </div>
+            <div class="sub-right">
+              <button class="text-btn" data-toast="已复制 v2"><i data-lucide="copy" class="icon"></i>复制 v2</button>
+              <button class="primary-btn" data-toast="已复制最新版本"><i data-lucide="copy" class="icon"></i>复制 Latest</button>
+            </div>
+          </div>
+
+          <div class="diff-grid" style="margin-top:14px;">
+            <section class="diff-pane">
+              <div class="diff-pane-head"><span>历史版本 v2</span><span class="small-muted">昨天 18:10</span></div>
+              <div class="diff-code">
+                <div class="diff-num">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9</div>
+                <div class="diff-lines">
+                  <div class="diff-line same">请重构下面的代码，目标是提升可读性。</div>
+                  <div class="diff-line same"></div>
+                  <div class="diff-line same">要求：</div>
+                  <div class="diff-line same">- 不改变现有业务行为。</div>
+                  <div class="diff-line removed">- 尽量简化代码。</div>
+                  <div class="diff-line removed">- 返回重构后的代码。</div>
+                  <div class="diff-line same"></div>
+                  <div class="diff-line same">输出：</div>
+                  <div class="diff-line removed">1. 重构后的代码</div>
+                </div>
+              </div>
+            </section>
+
+            <section class="diff-pane">
+              <div class="diff-pane-head"><span>最新版本 v3</span><span class="small-muted">今天 15:42</span></div>
+              <div class="diff-code">
+                <div class="diff-num">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11</div>
+                <div class="diff-lines">
+                  <div class="diff-line same">请重构下面的代码，目标是提升可读性和可维护性。</div>
+                  <div class="diff-line same"></div>
+                  <div class="diff-line same">要求：</div>
+                  <div class="diff-line same">- 不改变现有业务行为。</div>
+                  <div class="diff-line added">- 优先减少重复逻辑，避免引入过度抽象。</div>
+                  <div class="diff-line added">- 指出任何可能影响边界行为的修改。</div>
+                  <div class="diff-line added">- 如果需要新增测试，请列出最小测试集。</div>
+                  <div class="diff-line same"></div>
+                  <div class="diff-line same">输出：</div>
+                  <div class="diff-line added">1. 风险说明</div>
+                  <div class="diff-line added">2. 重构后的代码</div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div id="popup" class="view">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Fast Use 弹窗</h1>
+              <p class="page-subtitle">Chrome/Edge 扩展图标点击后的快速使用体验</p>
+            </div>
+          </div>
+
+          <div class="popup-preview">
+            <div class="popup-head">
+              <div class="brand" style="min-width:0"><div class="brand-mark">FH</div><span>Prompt Manager</span></div>
+              <button class="icon-btn" title="打开管理页" data-view-button="library"><i data-lucide="external-link" class="icon"></i></button>
+            </div>
+            <div class="popup-body">
+              <label class="search-box">
+                <i data-lucide="search" class="icon"></i>
+                <input value="refactor" aria-label="弹窗搜索" />
+              </label>
+              <div class="segmented">
+                <span class="chip active">全部</span>
+                <span class="chip">代码</span>
+                <span class="chip">文案</span>
+                <span class="chip">数据</span>
+                <span class="chip">图像</span>
+              </div>
+
+              <div>
+                <div class="section-title">最近使用</div>
+                <div class="result-list" style="margin-top:8px;">
+                  <div class="result-item">
+                    <div class="result-title"><span>Code Refactor Helper</span><button class="icon-btn" title="复制" data-toast="已复制最新版本"><i data-lucide="copy" class="icon"></i></button></div>
+                    <p class="page-subtitle">v3 · 今天 15:42 · 代码重构</p>
+                  </div>
+                  <div class="result-item">
+                    <div class="result-title"><span>Review Checklist</span><button class="icon-btn" title="复制" data-toast="已复制最新版本"><i data-lucide="copy" class="icon"></i></button></div>
+                    <p class="page-subtitle">v2 · 昨天 · 代码重构</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="section-title">匹配结果</div>
+                <div class="result-list" style="margin-top:8px;">
+                  <div class="result-item">
+                    <div class="result-title"><span>TypeScript Migration</span><button class="icon-btn" title="复制" data-toast="已复制最新版本"><i data-lucide="copy" class="icon"></i></button></div>
+                    <p class="page-subtitle">v5 · typescript, migration</p>
+                  </div>
+                  <div class="result-item">
+                    <div class="result-title"><span>Bug Report Triage</span><button class="icon-btn" title="复制" data-toast="已复制最新版本"><i data-lucide="copy" class="icon"></i></button></div>
+                    <p class="page-subtitle">v1 · issue, debug</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="import" class="view">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">导入预览</h1>
+              <p class="page-subtitle">合并导入，不静默覆盖或删除本地数据</p>
+            </div>
+          </div>
+
+          <section class="import-card">
+            <div style="display:flex; justify-content:space-between; gap:16px; align-items:flex-start;">
+              <div>
+                <h2 class="card-title">fh-prompt-backup-2026-06-26.json</h2>
+                <p class="page-subtitle">schemaVersion: 1 · 导出时间：2026-06-26 16:30</p>
+              </div>
+              <span class="version-pill">合并预览</span>
+            </div>
+            <div class="import-grid">
+              <div class="stat-card"><div class="stat-num">3</div><div class="stat-label">新增 Scene</div></div>
+              <div class="stat-card"><div class="stat-num">14</div><div class="stat-label">新增 Prompt</div></div>
+              <div class="stat-card"><div class="stat-num">9</div><div class="stat-label">合并版本</div></div>
+            </div>
+            <div class="version-list">
+              <div class="version-item">
+                <div class="version-line"><span class="version-no">同名 Scene：代码重构</span><span class="small-muted">保留本地图标/颜色</span></div>
+                <div class="version-note">导入的 Prompt 会归入本地“代码重构”场景。</div>
+              </div>
+              <div class="version-item">
+                <div class="version-line"><span class="version-no">冲突 Prompt：Code Refactor Helper</span><span class="small-muted">合并版本</span></div>
+                <div class="version-note">导入内容本地不存在，将作为一个新版本保留。</div>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+              <button class="text-btn"><i data-lucide="x" class="icon"></i>取消</button>
+              <button class="primary-btn" data-toast="导入合并完成"><i data-lucide="check" class="icon"></i>执行导入</button>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"><i data-lucide="check-circle-2" class="icon"></i><span id="toastText">已完成</span></div>
+
+  <script>
+    const views = Array.from(document.querySelectorAll('.view'));
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const toast = document.getElementById('toast');
+    const toastText = document.getElementById('toastText');
+
+    function showView(id) {
+      views.forEach(view => view.classList.toggle('active', view.id === id));
+      tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.view === id));
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function showToast(text) {
+      toastText.textContent = text || '已完成';
+      toast.classList.add('show');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function filterPromptCards(query) {
+      const normalized = query.trim().toLowerCase();
+      document.querySelectorAll('.prompt-card').forEach(card => {
+        const haystack = (card.dataset.search || '').toLowerCase();
+        card.style.display = !normalized || haystack.includes(normalized) ? '' : 'none';
+      });
+    }
+
+    document.addEventListener('click', event => {
+      const viewButton = event.target.closest('[data-view], [data-view-button]');
+      if (viewButton) {
+        const id = viewButton.dataset.view || viewButton.dataset.viewButton;
+        if (id) showView(id);
+      }
+
+      if (event.target.closest('[data-open-detail]')) showView('detail');
+      if (event.target.closest('[data-open-diff]')) showView('diff');
+      if (event.target.closest('[data-back-library]')) showView('library');
+      if (event.target.closest('[data-back-detail]')) showView('detail');
+
+      const toastButton = event.target.closest('[data-toast]');
+      if (toastButton) showToast(toastButton.dataset.toast);
+    });
+
+    document.querySelector('[data-global-search]')?.addEventListener('input', event => {
+      filterPromptCards(event.target.value);
+      showView('library');
+    });
+
+    const initialView = new URLSearchParams(window.location.search).get('view');
+    if (initialView && document.getElementById(initialView)) showView(initialView);
+    if (window.lucide) window.lucide.createIcons();
+  </script>
+</body>
+</html>
