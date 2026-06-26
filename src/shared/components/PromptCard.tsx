@@ -30,7 +30,7 @@ export function PromptCard({
       </div>
       <div className="card-meta">
         <span>v{item.prompt.latestVersionNumber}</span>
-        <span>{item.scene.name}</span>
+        <span>场景：{item.scene.name}</span>
       </div>
     </article>
   );
