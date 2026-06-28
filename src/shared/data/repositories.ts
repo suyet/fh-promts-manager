@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { normalizePromptVersion } from "../tagUtils";
 import type { Prompt, PromptVersion, Scene, UsageRecord } from "../types";
 
 export const repositories = {
@@ -24,11 +25,16 @@ export const repositories = {
     }
   },
   versions: {
-    get: (id: string) => db.versions.get(id),
-    put: (version: PromptVersion) => db.versions.put(version),
-    bulkPut: (versions: PromptVersion[]) => db.versions.bulkPut(versions),
-    listByPrompt: (promptId: string) =>
-      db.versions.where("promptId").equals(promptId).sortBy("versionNumber")
+    async get(id: string) {
+      const version = await db.versions.get(id);
+      return version ? normalizePromptVersion(version) : undefined;
+    },
+    put: (version: PromptVersion) => db.versions.put(normalizePromptVersion(version)),
+    bulkPut: (versions: PromptVersion[]) => db.versions.bulkPut(versions.map(normalizePromptVersion)),
+    async listByPrompt(promptId: string) {
+      const versions = await db.versions.where("promptId").equals(promptId).sortBy("versionNumber");
+      return versions.map(normalizePromptVersion);
+    }
   },
   usageRecords: {
     put: (record: UsageRecord) => db.usageRecords.put(record),

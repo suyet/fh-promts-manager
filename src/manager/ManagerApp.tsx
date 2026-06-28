@@ -9,7 +9,7 @@ import { downloadJsonFile, downloadTextFile } from "../shared/services/downloadS
 import { importExportService } from "../shared/services/importExportService";
 import { promptService } from "../shared/services/promptService";
 import "../shared/styles/app.css";
-import type { ExportPayload, ImportPreview, PromptVersion, PromptWithLatest, Scene, UsageSource } from "../shared/types";
+import type { ExportPayload, ImportPreview, PromptTag, PromptVersion, PromptWithLatest, Scene, UsageSource } from "../shared/types";
 import { SceneFormDialog, type SceneFormInput } from "./components/SceneFormDialog";
 import { DiffPage } from "./pages/DiffPage";
 import { ImportPage } from "./pages/ImportPage";
@@ -261,7 +261,7 @@ export function ManagerApp() {
     });
   }
 
-  async function createPrompt(input: { title: string; description: string; tags: string[]; content: string }) {
+  async function createPrompt(input: { title: string; description: string; tags: PromptTag[]; content: string }) {
     const title = input.title.trim();
     const content = input.content;
     if (!title || !content.trim() || !selectedSceneId) return;

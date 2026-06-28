@@ -1,6 +1,7 @@
 import { EXPORT_SCHEMA_VERSION } from "../constants";
 import { db } from "../data/db";
 import { repositories } from "../data/repositories";
+import { normalizePromptVersion } from "../tagUtils";
 import type { ExportPayload, ImportPreview, Prompt, PromptVersion, Scene } from "../types";
 
 function samePromptKey(prompt: Prompt, sceneNameById: Map<string, string>) {
@@ -53,7 +54,7 @@ function buildVersionIdMap(
     }
     const newId = crypto.randomUUID();
     versionIdMap.set(importedVersion.id, newId);
-    versionsToAdd.push({ ...importedVersion, id: newId, promptId });
+    versionsToAdd.push(normalizePromptVersion({ ...importedVersion, id: newId, promptId }));
     existingVersionIdByKey.set(versionKey, newId);
   }
 
@@ -73,7 +74,7 @@ export const importExportService = {
       exportedAt: new Date().toISOString(),
       scenes,
       prompts,
-      versions,
+      versions: versions.map(normalizePromptVersion),
       usageRecords
     };
   },

@@ -42,6 +42,9 @@ describe("LibraryPage", () => {
     expect(screen.getByText("latest-tag")).toHaveClass("tag");
     expect(screen.queryByText("old")).not.toBeInTheDocument();
     expect(screen.getByText("2026/1/22")).toHaveClass("prompt-updated-date");
+    expect(screen.getByText("v1")).toBeInTheDocument();
+    expect(screen.queryByText("# v1")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("取消收藏")).toHaveClass("favorite-active");
     expect(screen.queryByText("场景：代码重构")).not.toBeInTheDocument();
     expect(screen.getByText("最新版本亮点内容")).toHaveClass("prompt-card-description");
     expect(screen.getByText("最新版本亮点内容").closest(".card-top")).toBeNull();

@@ -1,5 +1,7 @@
 import { X } from "lucide-react";
 import { useState } from "react";
+import { createPromptTag, getPromptTagStyle } from "../tagUtils";
+import type { PromptTag } from "../types";
 
 export function TagInput({
   tags,
@@ -9,8 +11,8 @@ export function TagInput({
   showAddButton = true,
   placeholder = "添加标签..."
 }: {
-  tags: string[];
-  onChange: (tags: string[]) => void;
+  tags: PromptTag[];
+  onChange: (tags: PromptTag[]) => void;
   maxTags?: number;
   maxTagLength?: number;
   showAddButton?: boolean;
@@ -21,23 +23,23 @@ export function TagInput({
 
   function addTag() {
     const tag = draft.trim();
-    if (!tag || tags.includes(tag) || !canAddMore) return;
+    if (!tag || tags.some((item) => item.label === tag) || !canAddMore) return;
     if (maxTagLength !== undefined && tag.length > maxTagLength) return;
-    onChange([...tags, tag]);
+    onChange([...tags, createPromptTag(tag)]);
     setDraft("");
   }
 
   function removeTag(tag: string) {
-    onChange(tags.filter((item) => item !== tag));
+    onChange(tags.filter((item) => item.label !== tag));
   }
 
   return (
     <div className="tag-field">
       <div className="tag-editor" aria-label="标签栏">
         {tags.map((tag) => (
-          <span className="tag tag-editable" key={tag}>
-            {tag}
-            <button type="button" aria-label={`移除标签 ${tag}`} onClick={() => removeTag(tag)}>
+          <span className="tag tag-editable" key={`${tag.label}-${tag.color}`} style={getPromptTagStyle(tag.color)}>
+            {tag.label}
+            <button type="button" aria-label={`移除标签 ${tag.label}`} onClick={() => removeTag(tag.label)}>
               <X className="icon" />
             </button>
           </span>

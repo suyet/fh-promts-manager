@@ -28,7 +28,9 @@ describe("promptService", () => {
     expect(versions).toHaveLength(1);
     expect(versions[0].content).toBe("content v1");
     expect(versions[0].description).toBe("desc");
-    expect(versions[0].tags).toEqual(["tag-a"]);
+    expect(versions[0].tags).toEqual([
+      expect.objectContaining({ label: "tag-a", color: expect.any(String) })
+    ]);
   });
 
   it("saving content creates a new immutable version", async () => {
@@ -51,7 +53,7 @@ describe("promptService", () => {
       versionNumber: 2,
       customVersionLabel: "V5大概答复",
       description: "v2 亮点",
-      tags: ["v2"]
+      tags: [expect.objectContaining({ label: "v2", color: expect.any(String) })]
     });
   });
 
@@ -69,6 +71,19 @@ describe("promptService", () => {
     await expect(promptService.searchPrompts({ text: "old-tag" })).resolves.toHaveLength(0);
     await expect(promptService.searchPrompts({ text: "边界行为" })).resolves.toHaveLength(1);
     await expect(promptService.searchPrompts({ text: "不存在" })).resolves.toHaveLength(0);
+  });
+
+  it("normalizes legacy string tags when returning search results", async () => {
+    await repositories.scenes.put(sceneFactory());
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory({
+      tags: ["legacy-tag"]
+    }));
+
+    const [result] = await promptService.searchPrompts({ text: "legacy-tag" });
+    expect(result.latestVersion.tags).toEqual([
+      expect.objectContaining({ label: "legacy-tag", color: expect.any(String) })
+    ]);
   });
 
   it("returns prompts by user-defined order", async () => {

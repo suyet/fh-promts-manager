@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { Button } from "../../shared/components/Button";
 import { IconButton } from "../../shared/components/IconButton";
 import { FIELD_LIMITS } from "../../shared/constants";
+import { normalizePromptTags } from "../../shared/tagUtils";
 import { PromptWorkspace } from "../components/PromptWorkspace";
-import type { PromptVersion, PromptWithLatest } from "../../shared/types";
+import type { PromptTag, PromptVersion, PromptWithLatest } from "../../shared/types";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -29,7 +30,7 @@ export function PromptDetailPage({
   onBack: () => void;
   onCopyLatest: () => void;
   onDelete: () => void;
-  onSaveVersion: (input: { content: string; description: string; tags: string[]; customVersionLabel?: string }) => void;
+  onSaveVersion: (input: { content: string; description: string; tags: PromptTag[]; customVersionLabel?: string }) => void;
   onSaveMetadata: (input: { title: string; favorite: boolean }) => void;
   onToggleFavorite: () => void;
   onCopyEditor: (content: string) => void;
@@ -39,7 +40,7 @@ export function PromptDetailPage({
   const [content, setContent] = useState(item.latestVersion.content);
   const [title, setTitle] = useState(item.prompt.title);
   const [description, setDescription] = useState(item.latestVersion.description);
-  const [tags, setTags] = useState<string[]>(item.latestVersion.tags);
+  const [tags, setTags] = useState<PromptTag[]>(normalizePromptTags(item.latestVersion.tags));
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [versionLabel, setVersionLabel] = useState(`v${item.prompt.latestVersionNumber + 1}`);
@@ -50,7 +51,7 @@ export function PromptDetailPage({
     setContent(item.latestVersion.content);
     setTitle(item.prompt.title);
     setDescription(item.latestVersion.description);
-    setTags(item.latestVersion.tags);
+    setTags(normalizePromptTags(item.latestVersion.tags));
     setVersionLabel(`v${item.prompt.latestVersionNumber + 1}`);
     setIsEditingTitle(false);
     setIsSaveDialogOpen(false);
@@ -75,7 +76,7 @@ export function PromptDetailPage({
     saveMetadata({ title });
   }
 
-  function handleTagsChange(nextTags: string[]) {
+  function handleTagsChange(nextTags: PromptTag[]) {
     setTags(nextTags);
   }
 
@@ -132,7 +133,7 @@ export function PromptDetailPage({
               }}
             />
             <IconButton
-              className="bare-icon-btn"
+              className={item.prompt.favorite ? "bare-icon-btn favorite-active" : "bare-icon-btn"}
               label={item.prompt.favorite ? "取消收藏" : "收藏"}
               icon={<Star className="icon" fill={item.prompt.favorite ? "currentColor" : "none"} />}
               onClick={onToggleFavorite}

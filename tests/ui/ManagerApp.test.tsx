@@ -18,6 +18,9 @@ describe("ManagerApp", () => {
 
   it("creates a prompt from the New action", async () => {
     const user = userEvent.setup();
+    vi.spyOn(Math, "random")
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.8);
     await repositories.scenes.put(sceneFactory());
 
     render(<ManagerApp />);
@@ -47,10 +50,15 @@ describe("ManagerApp", () => {
     });
 
     const versions = await repositories.versions.listByPrompt((await repositories.prompts.list())[0].id);
+    const savedTags = versions[0].tags as Array<{ label: string; color: string }>;
     expect(versions).toHaveLength(1);
     expect(versions[0].content).toBe('```json\n{\n  "key": "value"\n}\n```');
     expect(versions[0].description).toBe("新建描述");
-    expect(versions[0].tags).toEqual(["alpha", "beta"]);
+    expect(versions[0].tags).toEqual([
+      expect.objectContaining({ label: "alpha", color: expect.any(String) }),
+      expect.objectContaining({ label: "beta", color: expect.any(String) })
+    ]);
+    expect(savedTags[0]).not.toMatchObject({ color: savedTags[1].color });
   });
 
   it("toggles favorite and copies the latest version from prompt cards", async () => {

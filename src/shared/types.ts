@@ -59,6 +59,24 @@ export interface Prompt {
   updatedAt: IsoDateString;
 }
 
+export type PromptTagColor =
+  | "green"
+  | "blue"
+  | "sky"
+  | "teal"
+  | "violet"
+  | "pink"
+  | "rose"
+  | "orange"
+  | "amber";
+
+export interface PromptTag {
+  label: string;
+  color: PromptTagColor;
+}
+
+export type StoredPromptTag = string | PromptTag;
+
 export interface PromptVersion {
   id: Id;
   promptId: Id;
@@ -66,7 +84,7 @@ export interface PromptVersion {
   customVersionLabel?: string;
   content: string;
   description: string;
-  tags: string[];
+  tags: StoredPromptTag[];
   note: string;
   createdAt: IsoDateString;
 }

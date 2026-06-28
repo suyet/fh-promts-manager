@@ -1,4 +1,5 @@
 import { GitCompare } from "lucide-react";
+import { getPromptTagStyle, normalizePromptTags } from "../tagUtils";
 import type { PromptVersion } from "../types";
 import { IconButton } from "./IconButton";
 
@@ -44,7 +45,11 @@ export function VersionHistory({
                 <div className="version-card-footer">
                   <span className="version-date">{formatDate(version.createdAt)}</span>
                   <span className="version-tags">
-                    {version.tags.map((tag) => <span className="tag" key={tag}>{tag}</span>)}
+                    {normalizePromptTags(version.tags).map((tag) => (
+                      <span className="tag" key={`${version.id}-${tag.label}-${tag.color}`} style={getPromptTagStyle(tag.color)}>
+                        {tag.label}
+                      </span>
+                    ))}
                   </span>
                 </div>
               </div>

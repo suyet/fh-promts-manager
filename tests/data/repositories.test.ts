@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDatabase } from "../../src/shared/data/db";
 import { repositories } from "../../src/shared/data/repositories";
+import { normalizePromptVersion } from "../../src/shared/tagUtils";
 import { promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
 
 describe("repositories", () => {
@@ -19,7 +20,7 @@ describe("repositories", () => {
 
     await expect(repositories.scenes.get(scene.id)).resolves.toEqual(scene);
     await expect(repositories.prompts.get(prompt.id)).resolves.toEqual(prompt);
-    await expect(repositories.versions.listByPrompt(prompt.id)).resolves.toEqual([version]);
+    await expect(repositories.versions.listByPrompt(prompt.id)).resolves.toEqual([normalizePromptVersion(version)]);
   });
 
   it("deletes prompt versions when a prompt is deleted", async () => {

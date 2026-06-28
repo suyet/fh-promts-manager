@@ -33,6 +33,7 @@ describe("PromptDetailPage", () => {
     expect(screen.queryByText("删除")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "删除" })).toHaveClass("bare-icon-btn");
     expect(screen.getByRole("button", { name: "保存新版本" })).toHaveClass("bare-icon-btn");
+    expect(screen.getByLabelText("取消收藏")).toHaveClass("favorite-active");
     expect(screen.getByRole("button", { name: "复制最新版本" }).previousElementSibling).toHaveClass("detail-action-divider");
     expect(screen.getByText("场景：代码重构")).toHaveClass("detail-sub-meta-item");
     expect(screen.getByText("更新于 2026/6/26")).toHaveClass("detail-sub-meta-item");
@@ -64,7 +65,9 @@ describe("PromptDetailPage", () => {
     expect(onSaveVersion).toHaveBeenCalledWith({
       content: "新的提示词正文",
       description: "当前亮点",
-      tags: ["review"],
+      tags: [
+        expect.objectContaining({ label: "review", color: expect.any(String) })
+      ],
       customVersionLabel: "V5大概答复1234"
     });
   });
@@ -122,7 +125,11 @@ describe("PromptDetailPage", () => {
     expect(onSaveVersion).toHaveBeenCalledWith({
       content: "请重构下面的代码。",
       description: "V5大概答复",
-      tags: ["review", "cleanup", "Deepseek V"],
+      tags: [
+        expect.objectContaining({ label: "review", color: expect.any(String) }),
+        expect.objectContaining({ label: "cleanup", color: expect.any(String) }),
+        expect.objectContaining({ label: "Deepseek V", color: expect.any(String) })
+      ],
       customVersionLabel: undefined
     });
 

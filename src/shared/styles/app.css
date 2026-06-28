@@ -612,9 +612,23 @@ button { border: 0; cursor: pointer; }
 }
 
 .card-meta {
+  align-items: center;
+  justify-content: space-between;
   color: #64748b;
   font-size: 13px;
   font-weight: 700;
+}
+
+.favorite-active {
+  color: #eab308;
+}
+
+.favorite-active:hover {
+  color: #ca8a04;
+}
+
+.prompt-version {
+  color: #475569;
 }
 
 .prompt-updated {

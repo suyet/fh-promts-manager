@@ -3,7 +3,7 @@ import { lazy, Suspense } from "react";
 import { TagInput } from "../../shared/components/TagInput";
 import { VersionHistory } from "../../shared/components/VersionHistory";
 import { FIELD_LIMITS } from "../../shared/constants";
-import type { PromptVersion } from "../../shared/types";
+import type { PromptTag, PromptVersion } from "../../shared/types";
 
 const PromptEditor = lazy(() =>
   import("../../shared/components/PromptEditor").then((module) => ({ default: module.PromptEditor }))
@@ -24,12 +24,12 @@ export function PromptWorkspace({
 }: {
   content: string;
   description: string;
-  tags: string[];
+  tags: PromptTag[];
   versions?: PromptVersion[];
   latestVersionId?: string;
   onChangeContent: (value: string) => void;
   onChangeDescription: (value: string) => void;
-  onChangeTags: (tags: string[]) => void;
+  onChangeTags: (tags: PromptTag[]) => void;
   onCopyEditor: (content: string) => void;
   onDownloadEditor: (content: string) => void;
   onCompareToLatest?: (versionId: string) => void;

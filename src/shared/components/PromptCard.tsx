@@ -1,4 +1,5 @@
 import { Clock, Copy, GripVertical, Star } from "lucide-react";
+import { getPromptTagStyle, normalizePromptTags } from "../tagUtils";
 import type { PromptWithLatest } from "../types";
 import { IconButton } from "./IconButton";
 
@@ -55,6 +56,7 @@ export function PromptCard({
         </button>
         {!isSorting && <div className="card-icon-actions">
           <IconButton
+            className={item.prompt.favorite ? "favorite-active" : undefined}
             label={favoriteLabel}
             icon={<Star className="icon" fill={item.prompt.favorite ? "currentColor" : "none"} />}
             onClick={(event) => {
@@ -75,10 +77,14 @@ export function PromptCard({
         <p className="prompt-card-description">{summarizePromptContent(item.latestVersion.content)}</p>
       </button>
       <div className="tags">
-        {item.latestVersion.tags.map((tag) => <span className="tag" key={tag}>{tag}</span>)}
+        {normalizePromptTags(item.latestVersion.tags).map((tag) => (
+          <span className="tag" key={`${item.latestVersion.id}-${tag.label}-${tag.color}`} style={getPromptTagStyle(tag.color)}>
+            {tag.label}
+          </span>
+        ))}
       </div>
       <div className="card-meta">
-        <span># v{item.prompt.latestVersionNumber}</span>
+        <span className="prompt-version">v{item.prompt.latestVersionNumber}</span>
         <span className="prompt-updated">
           <Clock className="icon" />
           <span className="prompt-updated-date">{formatDate(item.prompt.updatedAt)}</span>

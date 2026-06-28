@@ -4,17 +4,18 @@ import { Button } from "../../shared/components/Button";
 import { IconButton } from "../../shared/components/IconButton";
 import { FIELD_LIMITS } from "../../shared/constants";
 import { PromptWorkspace } from "../components/PromptWorkspace";
+import type { PromptTag } from "../../shared/types";
 
 export function NewPromptPage({
   onBack,
   onSave
 }: {
   onBack: () => void;
-  onSave: (input: { title: string; description: string; tags: string[]; content: string }) => void;
+  onSave: (input: { title: string; description: string; tags: PromptTag[]; content: string }) => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<PromptTag[]>([]);
   const [content, setContent] = useState("");
   const canSave = Boolean(title.trim() && content.trim());
 

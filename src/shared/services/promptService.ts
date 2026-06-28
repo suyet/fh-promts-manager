@@ -1,6 +1,7 @@
 import { db } from "../data/db";
 import { repositories } from "../data/repositories";
-import type { Prompt, PromptSearchQuery, PromptWithLatest, PromptVersion, UsageSource } from "../types";
+import { normalizePromptTags, normalizePromptVersion } from "../tagUtils";
+import type { Prompt, PromptSearchQuery, PromptWithLatest, PromptVersion, StoredPromptTag, UsageSource } from "../types";
 
 function now() {
   return new Date().toISOString();
@@ -19,7 +20,7 @@ export const promptService = {
     sceneId: string;
     title: string;
     description: string;
-    tags: string[];
+    tags: StoredPromptTag[];
     favorite: boolean;
     content: string;
     note: string;
@@ -46,7 +47,7 @@ export const promptService = {
       versionNumber: 1,
       content: input.content,
       description: input.description,
-      tags: input.tags,
+      tags: normalizePromptTags(input.tags),
       note: input.note,
       createdAt: timestamp
     };
@@ -59,7 +60,7 @@ export const promptService = {
 
   async saveNewVersion(
     promptId: string,
-    input: { content: string; description: string; tags: string[]; note: string; customVersionLabel?: string }
+    input: { content: string; description: string; tags: StoredPromptTag[]; note: string; customVersionLabel?: string }
   ): Promise<Prompt> {
     const prompt = await repositories.prompts.get(promptId);
     if (!prompt) throw new Error("Prompt not found.");
@@ -71,7 +72,7 @@ export const promptService = {
       customVersionLabel: input.customVersionLabel?.trim() || undefined,
       content: input.content,
       description: input.description,
-      tags: input.tags,
+      tags: normalizePromptTags(input.tags),
       note: input.note,
       createdAt: timestamp
     };
@@ -114,9 +115,14 @@ export const promptService = {
       const latestVersion = await repositories.versions.get(prompt.latestVersionId);
       const scene = sceneById.get(prompt.sceneId);
       if (!latestVersion || !scene) continue;
-      const searchable = [prompt.title, latestVersion.description, latestVersion.tags.join(" "), latestVersion.content].join(" ");
+      const searchable = [
+        prompt.title,
+        latestVersion.description,
+        normalizePromptTags(latestVersion.tags).map((tag) => tag.label).join(" "),
+        latestVersion.content
+      ].join(" ");
       if (!text || includesText(searchable, text)) {
-        results.push({ prompt, latestVersion, scene });
+        results.push({ prompt, latestVersion: normalizePromptVersion(latestVersion), scene });
       }
     }
     return results.sort((a, b) => a.prompt.sortOrder - b.prompt.sortOrder);
@@ -134,7 +140,7 @@ export const promptService = {
       const latestVersion = await repositories.versions.get(prompt.latestVersionId);
       const scene = sceneById.get(prompt.sceneId);
       if (!latestVersion || !scene) continue;
-      results.push({ prompt, latestVersion, scene });
+      results.push({ prompt, latestVersion: normalizePromptVersion(latestVersion), scene });
     }
 
     return results;
