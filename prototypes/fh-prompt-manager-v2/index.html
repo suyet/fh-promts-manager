@@ -1,0 +1,1975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FH Prompt Manager V2 高保真原型</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --panel-soft: #fbfdff;
+      --line: #e3e9f2;
+      --line-soft: #f0f4f8;
+      --line-strong: #d7e0ef;
+      --text: #182232;
+      --muted: #64748b;
+      --muted-2: #94a3b8;
+      --blue: #2563eb;
+      --blue-50: #eff6ff;
+      --blue-100: #dbeafe;
+      --blue-700: #1d4ed8;
+      --red: #dc2626;
+      --red-bg: #fef2f2;
+      --green: #16a34a;
+      --green-bg: #ecfdf3;
+      --amber: #d97706;
+      --amber-bg: #fffbeb;
+      --teal: #0f766e;
+      --teal-bg: #ccfbf1;
+      --orange: #ea580c;
+      --orange-bg: #ffedd5;
+      --violet: #7c3aed;
+      --violet-bg: #ede9fe;
+      --radius: 8px;
+      --topbar: 68px;
+      font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 560px;
+      min-height: 100vh;
+      color: var(--text);
+      background: var(--bg);
+      font-size: 15px;
+    }
+
+    button, input, textarea, select { font: inherit; }
+    button { border: 0; cursor: pointer; }
+    h1, h2, h3, p { margin: 0; }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: none;
+    }
+
+    .btn,
+    .icon-btn,
+    .tab,
+    .card-main,
+    .scene-item,
+    .prompt-card,
+    .image-prompt-card,
+    .mini-view-tab {
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 36px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .btn:hover,
+    .icon-btn:hover,
+    .tab:hover,
+    .mini-view-tab:hover {
+      border-color: #cbd5e1;
+      background: var(--blue-50);
+      color: var(--blue);
+    }
+
+    .btn-primary {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .btn-primary:hover {
+      background: var(--blue-700);
+      color: #ffffff;
+    }
+
+    .btn-danger {
+      border-color: #fecaca;
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+    }
+
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .bare-icon-btn {
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: 1fr minmax(320px, 580px) 1fr;
+      align-items: center;
+      gap: 18px;
+      height: var(--topbar);
+      padding: 0 24px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 0 1px 12px rgba(15, 23, 42, 0.04);
+    }
+
+    .brand,
+    .top-actions,
+    .top-search,
+    .card-top,
+    .card-icon-actions,
+    .page-head,
+    .page-actions,
+    .sub-header,
+    .sub-left,
+    .sub-right,
+    .badge-row,
+    .version-row,
+    .modal-head,
+    .modal-actions {
+      display: flex;
+      align-items: center;
+    }
+
+    .brand { gap: 10px; min-width: 0; }
+    .brand-logo {
+      width: 57px;
+      height: 57px;
+      border-radius: 12px;
+      object-fit: cover;
+    }
+
+    .brand-name {
+      color: var(--blue);
+      font-size: 22px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      white-space: nowrap;
+    }
+
+    .top-search-form {
+      display: flex;
+      justify-self: center;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .top-search {
+      justify-self: center;
+      width: 100%;
+      min-width: 0;
+      height: 40px;
+      gap: 8px;
+      padding: 0 4px 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius) 0 0 var(--radius);
+      background: var(--panel-soft);
+      color: var(--muted);
+    }
+
+    .top-search input {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+    }
+
+    .search-submit {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 74px;
+      height: 40px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      background: var(--blue);
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .top-actions {
+      justify-self: end;
+      gap: 8px;
+    }
+
+    .top-action-button {
+      border-color: transparent;
+      background: transparent;
+      color: #334155;
+      font-weight: 700;
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .main {
+      min-height: calc(100vh - var(--topbar));
+      padding: 24px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 2fr) minmax(0, 8fr);
+      gap: 20px;
+    }
+
+    .side-panel,
+    .workbench,
+    .right-panel,
+    .import-card,
+    .diff-pane,
+    .preview-panel,
+    .editor,
+    .image-upload-box,
+    .asset-check-row {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+    }
+
+    .side-panel,
+    .workbench,
+    .import-card {
+      padding: 18px;
+    }
+
+    .workbench {
+      container-type: inline-size;
+      min-width: 0;
+    }
+
+    .side-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .scene-section-title {
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+
+    .side-actions { display: flex; gap: 8px; }
+    .side-actions .bare-icon-btn { width: 34px; height: 34px; }
+
+    .scene-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .scene-item {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: start;
+      width: 100%;
+      min-height: 116px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--text);
+      text-align: left;
+    }
+
+    .scene-item.active {
+      border-color: #7aa2ff;
+      background: var(--blue-50);
+    }
+
+    .scene-select {
+      display: grid;
+      grid-template-columns: 46px minmax(0, 1fr);
+      align-items: start;
+      gap: 14px;
+      min-width: 0;
+      padding: 0 32px 0 0;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+    }
+
+    .scene-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius);
+      color: #ffffff;
+    }
+
+    .scene-meta {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .scene-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .scene-count-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.25;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .scene-type-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .scene-type-chip.image {
+      background: var(--orange-bg);
+      color: var(--orange);
+    }
+
+    .scene-type-chip.text {
+      background: var(--blue-50);
+      color: var(--blue);
+    }
+
+    .scene-desc {
+      display: block;
+      overflow: hidden;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .scene-actions {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 150ms ease;
+    }
+
+    .scene-item:hover .scene-actions,
+    .scene-item:focus-within .scene-actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .scene-actions .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-color: transparent;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .page-head,
+    .sub-header {
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .page-head h1,
+    .sub-header h1,
+    .import-card h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .page-head p,
+    .sub-meta,
+    .muted {
+      color: var(--muted);
+    }
+
+    .page-title-stack {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .page-actions,
+    .sub-left,
+    .sub-right,
+    .card-icon-actions,
+    .badge-row {
+      gap: 8px;
+    }
+
+    .sub-left {
+      min-width: 0;
+      flex-wrap: wrap;
+      row-gap: 8px;
+    }
+
+    .sub-right .bare-icon-btn {
+      width: 42px;
+      height: 42px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .badge-text {
+      background: var(--blue-50);
+      color: var(--blue);
+    }
+
+    .badge-image {
+      background: var(--orange-bg);
+      color: var(--orange);
+    }
+
+    .badge-lock {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .version-pill {
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: var(--green-bg);
+      color: var(--green);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .prompt-grid {
+      display: grid;
+      width: 100%;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .prompt-card,
+    .image-prompt-card {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+      cursor: pointer;
+    }
+
+    .prompt-card {
+      display: flex;
+      height: 250px;
+      flex-direction: column;
+      padding: 24px;
+    }
+
+    .prompt-card:hover,
+    .image-prompt-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .card-top {
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-main {
+      min-width: 0;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+    }
+
+    .card-main h2,
+    .image-card-body h2 {
+      overflow: hidden;
+      margin: 0;
+      color: #0f172a;
+      font-size: 19px;
+      line-height: 1.25;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .prompt-card-description {
+      display: -webkit-box;
+      overflow: hidden;
+      min-height: calc(1em * 1.65 * 3);
+      margin-top: 18px;
+      color: var(--muted);
+      line-height: 1.65;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+    }
+
+    .image-prompt-card {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 48px;
+      min-height: 320px;
+      padding: 0;
+    }
+
+    .image-card-media {
+      position: relative;
+      overflow: hidden;
+      background: #e2e8f0;
+    }
+
+    .image-card-media img,
+    .preview-image,
+    .diff-image img,
+    .modal-preview-image {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-card-actions {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .image-card-actions .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-color: rgba(255, 255, 255, 0.58);
+      background: rgba(255, 255, 255, 0.9);
+      color: #1f2937;
+      backdrop-filter: blur(8px);
+    }
+
+    .image-card-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 0;
+      min-height: 48px;
+      padding: 8px 12px;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .image-card-body h2 {
+      min-width: 0;
+      font-size: 15px;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+
+    .image-card-version {
+      flex: none;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .tags,
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 4px 8px;
+      border-radius: var(--radius);
+      background: #dcfce7;
+      color: #166534;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .tag.blue { background: var(--blue-100); color: var(--blue-700); }
+    .tag.sky { background: #e0f2fe; color: #0369a1; }
+    .tag.teal { background: var(--teal-bg); color: var(--teal); }
+    .tag.orange { background: var(--orange-bg); color: #c2410c; }
+    .tag.violet { background: var(--violet-bg); color: #6d28d9; }
+    .tag.rose { background: #ffe4e6; color: #be123c; }
+    .tag.amber { background: #fef3c7; color: #b45309; }
+
+    .card-meta {
+      align-items: center;
+      justify-content: space-between;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .prompt-updated {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .favorite-active { color: #eab308; }
+
+    .detail-main {
+      padding: 18px 24px 24px;
+      background: #eef2f7;
+    }
+
+    .full {
+      min-height: calc(100vh - var(--topbar) - 48px);
+    }
+
+    .detail-main .workbench.full {
+      overflow: hidden;
+      padding: 0;
+    }
+
+    .detail-main .sub-header {
+      margin: 0;
+      padding: 20px 24px;
+      background: #ffffff;
+    }
+
+    .detail-sub-meta {
+      display: flex;
+      flex-basis: 100%;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding-left: 44px;
+    }
+
+    .detail-sub-meta-item {
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .image-detail-grid {
+      display: grid;
+      grid-template-columns: minmax(300px, 0.95fr) minmax(390px, 1.15fr) 390px;
+      gap: 20px;
+      align-items: start;
+      min-height: calc(100vh - 156px);
+      padding: 20px;
+      background: #eef2f7;
+    }
+
+    .preview-panel {
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    .preview-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 50px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .preview-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .preview-image-wrap {
+      aspect-ratio: 4 / 3;
+      background: #e2e8f0;
+    }
+
+    .preview-info {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .asset-check-row {
+      display: grid;
+      gap: 4px;
+      padding: 12px;
+      border-color: var(--line-soft);
+      background: var(--panel-soft);
+      box-shadow: none;
+    }
+
+    .asset-check-row strong {
+      color: #0f172a;
+      font-size: 13px;
+    }
+
+    .asset-check-row span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .editor {
+      overflow: hidden;
+      background: #ffffff;
+      color: #0f172a;
+    }
+
+    .editor-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 52px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .editor-title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .editor-title-row strong { font-size: 18px; }
+    .editor-title-row span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .editor-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      min-height: 50px;
+      padding: 6px 16px;
+      border-bottom: 1px solid #dbe3ef;
+      background: #f8fafc;
+    }
+
+    .code-shell {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr);
+      min-height: 620px;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 14px;
+      line-height: 1.75;
+    }
+
+    .line-nums {
+      padding: 18px 10px;
+      border-right: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #94a3b8;
+      text-align: right;
+      user-select: none;
+    }
+
+    .code-shell pre {
+      overflow: auto;
+      margin: 0;
+      padding: 18px 22px;
+      white-space: pre-wrap;
+    }
+
+    .right-panel {
+      display: grid;
+      gap: 18px;
+      border-color: transparent;
+      border-left: 1px solid #dbe3ef;
+      border-radius: 0;
+      background: #eef2f7;
+      box-shadow: none;
+      padding: 18px 0 18px 18px;
+    }
+
+    .metadata-section {
+      display: grid;
+      gap: 14px;
+    }
+
+    .side-section-heading {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #0f172a;
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      max-width: 520px;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .field input,
+    .field textarea,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+      outline: 0;
+      font-weight: 400;
+    }
+
+    .field input,
+    .field select {
+      height: 40px;
+      padding: 0 12px;
+    }
+
+    .field textarea {
+      min-height: 92px;
+      padding: 10px 12px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .version-section {
+      max-height: 520px;
+      overflow-y: auto;
+      padding-right: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+
+    .version-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .version-row {
+      position: relative;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+    }
+
+    .version-row.current {
+      border-color: #93c5fd;
+      background: #eff6ff;
+    }
+
+    .version-thumb {
+      width: 62px;
+      height: 48px;
+      overflow: hidden;
+      border-radius: 6px;
+      background: #e2e8f0;
+      flex: none;
+    }
+
+    .version-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .version-info {
+      display: grid;
+      min-width: 0;
+      flex: 1;
+      gap: 6px;
+    }
+
+    .version-head-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .version-highlight {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 13px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .version-date {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .create-grid {
+      display: grid;
+      grid-template-columns: minmax(300px, 0.9fr) minmax(420px, 1.1fr);
+      gap: 20px;
+      padding: 20px;
+      background: #eef2f7;
+    }
+
+    .image-upload-box {
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    .drop-zone {
+      display: grid;
+      place-items: center;
+      min-height: 256px;
+      padding: 24px;
+      border-bottom: 1px solid var(--line-soft);
+      background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(234, 88, 12, 0.08)),
+        #ffffff;
+      text-align: center;
+    }
+
+    .drop-zone-inner {
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+      max-width: 360px;
+    }
+
+    .drop-zone-icon {
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 999px;
+      background: var(--blue-50);
+      color: var(--blue);
+    }
+
+    .upload-preview-strip {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+    }
+
+    .upload-preview-strip img {
+      width: 92px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: var(--radius);
+    }
+
+    .diff-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      padding: 20px;
+      background: #eef2f7;
+    }
+
+    .diff-pane {
+      overflow: hidden;
+      padding: 0;
+      background: #ffffff;
+    }
+
+    .diff-pane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 50px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .diff-image {
+      aspect-ratio: 16 / 9;
+      border-bottom: 1px solid var(--line-soft);
+      background: #e2e8f0;
+    }
+
+    .diff-content {
+      padding: 14px;
+    }
+
+    .diff-line {
+      margin: 0 0 6px;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      background: #f8fafc;
+      color: #334155;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .diff-line.added {
+      background: var(--green-bg);
+      color: #166534;
+    }
+
+    .diff-line.removed {
+      background: var(--red-bg);
+      color: #991b1b;
+    }
+
+    .import-card {
+      max-width: 920px;
+      margin: 44px auto 0;
+    }
+
+    .import-file-box {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      margin: 22px 0;
+      padding: 16px;
+      border: 1px dashed #93c5fd;
+      border-radius: var(--radius);
+      background: #f8fbff;
+    }
+
+    .import-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .import-grid div {
+      display: grid;
+      gap: 4px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+    }
+
+    .import-grid strong {
+      color: var(--blue);
+      font-size: 26px;
+    }
+
+    .validation-list {
+      display: grid;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .validation-row {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+    }
+
+    .validation-row .ok { color: var(--green); }
+    .validation-row strong { font-size: 14px; }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.42);
+    }
+
+    .modal-backdrop.open { display: grid; }
+
+    .modal {
+      width: min(460px, 100%);
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+    }
+
+    .modal.wide {
+      width: min(1040px, 100%);
+      padding: 0;
+    }
+
+    .modal-head {
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 58px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .modal-head h2 {
+      font-size: 18px;
+    }
+
+    .modal-body {
+      padding: 18px;
+    }
+
+    .version-preview-grid {
+      display: grid;
+      grid-template-columns: minmax(300px, 0.95fr) minmax(320px, 1.05fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .modal-image-box {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #e2e8f0;
+    }
+
+    .modal-image-ratio {
+      aspect-ratio: 4 / 3;
+    }
+
+    .readonly-editor {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+    }
+
+    .readonly-editor pre {
+      min-height: 360px;
+      margin: 0;
+      padding: 16px;
+      color: #0f172a;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    .modal-actions {
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 16px 18px;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .scene-form-grid {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .scene-form-preview {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+    }
+
+    .type-segment {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .type-option {
+      display: grid;
+      gap: 5px;
+      min-height: 74px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel-soft);
+      color: var(--text);
+      text-align: left;
+    }
+
+    .type-option.active {
+      border-color: #7aa2ff;
+      background: var(--blue-50);
+    }
+
+    .type-option.disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
+
+    .type-option strong {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .type-option span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .toast {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: 90;
+      display: none;
+      min-width: 120px;
+      padding: 12px 18px;
+      transform: translate(-50%, -50%);
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius);
+      background: #f0fdf4;
+      color: #166534;
+      font-weight: 800;
+      text-align: center;
+      pointer-events: none;
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+    }
+
+    .toast.show { display: block; }
+
+    @container (max-width: 1235px) {
+      .prompt-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @container (max-width: 817px) {
+      .prompt-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    @media (max-width: 1180px) {
+      .image-detail-grid,
+      .create-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .right-panel {
+        border-left: 0;
+        padding-left: 0;
+      }
+    }
+
+    @media (max-width: 900px) {
+      body { min-width: 0; }
+      .topbar {
+        grid-template-columns: 1fr;
+        height: auto;
+        padding: 12px;
+      }
+
+      .top-actions,
+      .sub-right {
+        flex-wrap: wrap;
+        justify-self: start;
+      }
+
+      .page-head,
+      .sub-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .page-title-stack {
+        width: 100%;
+      }
+
+      .badge-row {
+        flex-wrap: wrap;
+      }
+
+      .badge-row h1 {
+        min-width: min(100%, 10em);
+      }
+
+      .detail-sub-meta {
+        padding-left: 0;
+      }
+
+      .layout,
+      .diff-grid,
+      .version-preview-grid,
+      .import-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+    <symbol id="i-sort" viewBox="0 0 24 24"><path d="m7 7 5-5 5 5"/><path d="M12 2v20"/><path d="m17 17-5 5-5-5"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.2L5.8 21 7 14.2 2 9.3l6.9-1z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><rect x="2" y="2" width="13" height="13" rx="2"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+    <symbol id="i-compare" viewBox="0 0 24 24"><path d="M18 8h1a3 3 0 0 1 0 6h-1"/><path d="M6 8H5a3 3 0 0 0 0 6h1"/><path d="M8 12h8"/><path d="M8 5v14"/><path d="M16 5v14"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r=".5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-package" viewBox="0 0 24 24"><path d="m21 8-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="m18 2 4 4L8 20l-6 2 2-6z"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="assets/fh-pm-logo.png" alt="FH Prompt Manager logo" />
+      <span class="brand-name">FH Prompt Manager</span>
+    </div>
+    <form class="top-search-form" role="search">
+      <div class="top-search">
+        <svg class="icon"><use href="#i-search"></use></svg>
+        <input value="portrait" aria-label="搜索标题、标签、正文" />
+      </div>
+      <button class="search-submit" type="button">搜索</button>
+    </form>
+    <div class="top-actions">
+      <button class="btn top-action-button" data-view-button="import"><svg class="icon"><use href="#i-upload"></use></svg>导入</button>
+      <button class="btn top-action-button" data-toast="ZIP 导出任务已加入队列"><svg class="icon"><use href="#i-download"></use></svg>导出</button>
+      <button class="btn top-action-button" data-toast="完全离线的本地提示词管理插件"><svg class="icon"><use href="#i-info"></use></svg>关于应用</button>
+    </div>
+  </header>
+
+  <main id="library" class="main view active">
+    <div class="layout">
+      <aside class="side-panel">
+        <div class="side-head">
+          <div class="scene-section-title">场景</div>
+          <div class="side-actions">
+            <button class="icon-btn bare-icon-btn" aria-label="调整场景排序"><svg class="icon"><use href="#i-sort"></use></svg></button>
+            <button class="icon-btn bare-icon-btn" aria-label="新建场景" data-modal="scene-modal"><svg class="icon"><use href="#i-plus"></use></svg></button>
+          </div>
+        </div>
+        <div class="scene-list">
+          <article class="scene-item active" data-scene-tab="image">
+            <button class="scene-select">
+              <span class="scene-icon" style="background:#ea580c"><svg class="icon"><use href="#i-image"></use></svg></span>
+              <span class="scene-meta">
+                <span class="scene-title">视觉海报</span>
+                <span class="scene-count-line"><span class="scene-type-chip image">生图</span><span>8个提示词</span></span>
+              </span>
+            </button>
+            <span class="scene-desc">封面、产品图、活动主视觉</span>
+            <div class="scene-actions"><button class="icon-btn" aria-label="更多操作"><svg class="icon"><use href="#i-more"></use></svg></button></div>
+          </article>
+          <article class="scene-item" data-scene-tab="text">
+            <button class="scene-select">
+              <span class="scene-icon" style="background:#2563eb"><svg class="icon"><use href="#i-code"></use></svg></span>
+              <span class="scene-meta">
+                <span class="scene-title">代码重构</span>
+                <span class="scene-count-line"><span class="scene-type-chip text">文本</span><span>12个提示词</span></span>
+              </span>
+            </button>
+            <span class="scene-desc">审查、迁移、重构</span>
+            <div class="scene-actions"><button class="icon-btn" aria-label="更多操作"><svg class="icon"><use href="#i-more"></use></svg></button></div>
+          </article>
+          <article class="scene-item">
+            <button class="scene-select">
+              <span class="scene-icon" style="background:#0f766e"><svg class="icon"><use href="#i-file"></use></svg></span>
+              <span class="scene-meta">
+                <span class="scene-title">客户沟通</span>
+                <span class="scene-count-line"><span class="scene-type-chip text">文本</span><span>6个提示词</span></span>
+              </span>
+            </button>
+            <span class="scene-desc">邮件、会议、跟进话术</span>
+          </article>
+        </div>
+      </aside>
+
+      <section class="workbench">
+        <div class="page-head">
+          <div class="page-title-stack">
+            <div class="badge-row">
+              <h1 id="library-title">视觉海报</h1>
+              <span id="library-type" class="badge badge-image"><svg class="icon"><use href="#i-image"></use></svg>生图</span>
+              <span class="badge badge-lock"><svg class="icon"><use href="#i-lock"></use></svg>已有 Prompt，类型已锁定</span>
+            </div>
+            <p id="library-summary">8 个 Prompt · 最新封面来自 v4 · 最近更新于今天 16:20</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn"><svg class="icon"><use href="#i-sort"></use></svg>排序</button>
+            <button class="btn btn-primary" data-view-button="create"><svg class="icon"><use href="#i-plus"></use></svg>新建</button>
+          </div>
+        </div>
+
+        <div id="image-grid" class="prompt-grid">
+          <article class="image-prompt-card" data-view-button="detail">
+            <div class="image-card-media">
+              <img src="assets/cover-portrait.png" alt="柔光人像生成效果" />
+              <div class="image-card-actions">
+                <button class="icon-btn favorite-active" aria-label="取消收藏"><svg class="icon"><use href="#i-star"></use></svg></button>
+                <button class="icon-btn" aria-label="复制最新版本提示词" data-toast="已复制最新版本提示词"><svg class="icon"><use href="#i-copy"></use></svg></button>
+              </div>
+            </div>
+            <div class="image-card-body">
+              <h2>柔光人像封面</h2>
+              <span class="image-card-version">v4</span>
+            </div>
+          </article>
+          <article class="image-prompt-card">
+            <div class="image-card-media">
+              <img src="assets/cover-product.png" alt="产品陈列生成效果" />
+              <div class="image-card-actions">
+                <button class="icon-btn" aria-label="收藏"><svg class="icon"><use href="#i-star"></use></svg></button>
+                <button class="icon-btn" aria-label="复制最新版本提示词" data-toast="已复制最新版本提示词"><svg class="icon"><use href="#i-copy"></use></svg></button>
+              </div>
+            </div>
+            <div class="image-card-body">
+              <h2>新品系列静物图</h2>
+              <span class="image-card-version">v2</span>
+            </div>
+          </article>
+          <article class="image-prompt-card">
+            <div class="image-card-media">
+              <img src="assets/cover-poster.png" alt="活动海报生成效果" />
+              <div class="image-card-actions">
+                <button class="icon-btn" aria-label="收藏"><svg class="icon"><use href="#i-star"></use></svg></button>
+                <button class="icon-btn" aria-label="复制最新版本提示词" data-toast="已复制最新版本提示词"><svg class="icon"><use href="#i-copy"></use></svg></button>
+              </div>
+            </div>
+            <div class="image-card-body">
+              <h2>山地音乐节主视觉</h2>
+              <span class="image-card-version">v3</span>
+            </div>
+          </article>
+          <article class="image-prompt-card">
+            <div class="image-card-media">
+              <img src="assets/cover-interior.png" alt="室内空间生成效果" />
+              <div class="image-card-actions">
+                <button class="icon-btn" aria-label="收藏"><svg class="icon"><use href="#i-star"></use></svg></button>
+                <button class="icon-btn" aria-label="复制最新版本提示词" data-toast="已复制最新版本提示词"><svg class="icon"><use href="#i-copy"></use></svg></button>
+              </div>
+            </div>
+            <div class="image-card-body">
+              <h2>现代客厅空间</h2>
+              <span class="image-card-version">v1</span>
+            </div>
+          </article>
+        </div>
+
+        <div id="text-grid" class="prompt-grid" style="display:none;">
+          <article class="prompt-card">
+            <div class="card-top">
+              <button class="card-main"><h2>Code Refactor Helper</h2></button>
+              <div class="card-icon-actions">
+                <button class="icon-btn favorite-active" aria-label="取消收藏"><svg class="icon"><use href="#i-star"></use></svg></button>
+                <button class="icon-btn" aria-label="复制最新版本"><svg class="icon"><use href="#i-copy"></use></svg></button>
+              </div>
+            </div>
+            <p class="prompt-card-description">请重构下面的代码，目标是提升可读性和可维护性。不要改变现有业务行为，并说明风险和最小测试集。</p>
+            <div class="tags"><span class="tag teal">review</span><span class="tag blue">cleanup</span><span class="tag orange">safe-change</span></div>
+            <div class="card-meta"><span>v3</span><span class="prompt-updated"><svg class="icon"><use href="#i-clock"></use></svg>今天</span></div>
+          </article>
+          <article class="prompt-card">
+            <div class="card-top">
+              <button class="card-main"><h2>Review Checklist</h2></button>
+              <div class="card-icon-actions">
+                <button class="icon-btn" aria-label="收藏"><svg class="icon"><use href="#i-star"></use></svg></button>
+                <button class="icon-btn" aria-label="复制最新版本"><svg class="icon"><use href="#i-copy"></use></svg></button>
+              </div>
+            </div>
+            <p class="prompt-card-description">生成代码审查清单，覆盖正确性、边界条件、性能风险和测试缺口。</p>
+            <div class="tags"><span class="tag violet">tests</span><span class="tag teal">review</span></div>
+            <div class="card-meta"><span>v2</span><span class="prompt-updated"><svg class="icon"><use href="#i-clock"></use></svg>昨天</span></div>
+          </article>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <main id="detail" class="main detail-main view">
+    <section class="workbench full">
+      <div class="sub-header">
+        <div class="sub-left">
+          <button class="icon-btn bare-icon-btn" aria-label="返回" data-view-button="library"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+          <h1>柔光人像封面</h1>
+          <span class="version-pill">v4 当前</span>
+          <span class="badge badge-image"><svg class="icon"><use href="#i-image"></use></svg>生图</span>
+          <div class="detail-sub-meta">
+            <span class="detail-sub-meta-item">场景：视觉海报</span>
+            <span class="detail-sub-meta-item">更新于 2026/6/28</span>
+            <span class="detail-sub-meta-item">图片绑定当前版本</span>
+          </div>
+        </div>
+        <div class="sub-right">
+          <button class="icon-btn bare-icon-btn" aria-label="保存新版本" data-toast="打开保存新版本确认"><svg class="icon"><use href="#i-save"></use></svg></button>
+          <button class="icon-btn bare-icon-btn favorite-active" aria-label="取消收藏"><svg class="icon"><use href="#i-star"></use></svg></button>
+          <button class="icon-btn bare-icon-btn btn-danger" aria-label="删除"><svg class="icon"><use href="#i-trash"></use></svg></button>
+          <button class="btn btn-primary" data-toast="已复制最新版本提示词"><svg class="icon"><use href="#i-copy"></use></svg>复制最新版本</button>
+        </div>
+      </div>
+
+      <div class="image-detail-grid">
+        <section class="preview-panel">
+          <div class="preview-toolbar">
+            <div class="preview-title"><svg class="icon"><use href="#i-image"></use></svg>版本图片</div>
+            <button class="btn"><svg class="icon"><use href="#i-upload"></use></svg>替换为新版本图片</button>
+          </div>
+          <div class="preview-image-wrap">
+            <img class="preview-image" src="assets/cover-portrait.png" alt="柔光人像封面最新版本预览" />
+          </div>
+          <div class="preview-info">
+            <div class="asset-check-row"><strong>cover-portrait.png</strong><span>PNG · 1.2MB · 将随 v4 版本保留为只读图片资产</span></div>
+            <div class="asset-check-row"><strong>保存规则</strong><span>保存新版本时默认沿用该图；重新上传后，新图只绑定新版本。</span></div>
+          </div>
+        </section>
+
+        <section class="editor">
+          <div class="editor-bar">
+            <div class="editor-title-row"><strong>Prompt</strong><span>368 字符</span></div>
+            <div class="editor-actions">
+              <button class="icon-btn bare-icon-btn" aria-label="复制编辑器内容"><svg class="icon"><use href="#i-copy"></use></svg></button>
+              <button class="icon-btn bare-icon-btn" aria-label="下载"><svg class="icon"><use href="#i-download"></use></svg></button>
+            </div>
+          </div>
+          <div class="editor-toolbar">
+            <button class="icon-btn bare-icon-btn" aria-label="插入标题"><svg class="icon"><use href="#i-file"></use></svg></button>
+            <button class="icon-btn bare-icon-btn" aria-label="插入变量"><svg class="icon"><use href="#i-code"></use></svg></button>
+            <button class="icon-btn bare-icon-btn" aria-label="优化结构"><svg class="icon"><use href="#i-sparkles"></use></svg></button>
+          </div>
+          <div class="code-shell">
+            <div class="line-nums">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11</div>
+            <pre>生成一张用于 AI 工具封面的柔光人像照片。
+
+主体：年轻专业女性，正面半身像，神情自信自然。
+场景：浅色工作室背景，带轻微科技感。
+光线：大面积柔光，边缘有淡蓝色轮廓光。
+构图：4:3，主体居中，头肩留白适合叠加标题。
+风格：真实摄影、细腻皮肤质感、商业封面。
+
+避免：过度磨皮、夸张妆容、手部畸形、文字、水印。</pre>
+          </div>
+        </section>
+
+        <aside class="right-panel">
+          <section class="metadata-section">
+            <div class="side-section-heading"><svg class="icon"><use href="#i-file"></use></svg>亮点</div>
+            <label class="field">
+              <textarea>强化柔光、商业封面构图和标题留白，适合 AI 工具宣传页首屏。</textarea>
+            </label>
+            <div class="side-section-heading"><svg class="icon"><use href="#i-tag"></use></svg>标签</div>
+            <div class="tags"><span class="tag orange">portrait</span><span class="tag blue">cover</span><span class="tag teal">lighting</span></div>
+          </section>
+          <section class="metadata-section">
+            <div class="side-section-heading"><svg class="icon"><use href="#i-history"></use></svg>版本历史</div>
+            <div class="version-section">
+              <div class="version-list">
+                <article class="version-row current" data-modal="version-modal">
+                  <span class="version-thumb"><img src="assets/cover-portrait.png" alt="v4 缩略图" /></span>
+                  <div class="version-info">
+                    <div class="version-head-line"><strong>v4 当前</strong><button class="icon-btn bare-icon-btn" aria-label="预览版本"><svg class="icon"><use href="#i-eye"></use></svg></button></div>
+                    <span class="version-highlight">增加标题留白和淡蓝轮廓光。</span>
+                    <span class="version-date">2026/6/28</span>
+                  </div>
+                </article>
+                <article class="version-row" data-modal="version-modal">
+                  <span class="version-thumb"><img src="assets/cover-product.png" alt="v3 缩略图" /></span>
+                  <div class="version-info">
+                    <div class="version-head-line"><strong>v3</strong><button class="icon-btn bare-icon-btn" aria-label="与最新版本对比" data-view-button="diff"><svg class="icon"><use href="#i-compare"></use></svg></button></div>
+                    <span class="version-highlight">调整色温，降低背景复杂度。</span>
+                    <span class="version-date">2026/6/27</span>
+                  </div>
+                </article>
+                <article class="version-row" data-modal="version-modal">
+                  <span class="version-thumb"><img src="assets/cover-interior.png" alt="v2 缩略图" /></span>
+                  <div class="version-info">
+                    <div class="version-head-line"><strong>v2</strong><button class="icon-btn bare-icon-btn" aria-label="与最新版本对比" data-view-button="diff"><svg class="icon"><use href="#i-compare"></use></svg></button></div>
+                    <span class="version-highlight">补充真实摄影和商业封面约束。</span>
+                    <span class="version-date">2026/6/25</span>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <main id="create" class="main detail-main view">
+    <section class="workbench full">
+      <div class="sub-header">
+        <div class="sub-left">
+          <button class="icon-btn bare-icon-btn" aria-label="返回" data-view-button="library"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+          <h1>新建 Prompt</h1>
+          <span class="badge badge-image"><svg class="icon"><use href="#i-image"></use></svg>生图</span>
+          <div class="detail-sub-meta"><span class="detail-sub-meta-item">场景：视觉海报</span><span class="detail-sub-meta-item">必须上传一张版本图片</span></div>
+        </div>
+        <div class="sub-right">
+          <button class="btn btn-primary"><svg class="icon"><use href="#i-save"></use></svg>保存 v1</button>
+        </div>
+      </div>
+      <div class="create-grid">
+        <section class="image-upload-box">
+          <div class="drop-zone">
+            <div class="drop-zone-inner">
+              <span class="drop-zone-icon"><svg class="icon"><use href="#i-upload"></use></svg></span>
+              <strong>上传一张生成效果图</strong>
+              <p class="muted">PNG、JPG、WebP · 单张最大 10MB · 图片将绑定 v1</p>
+              <button class="btn btn-primary"><svg class="icon"><use href="#i-image"></use></svg>选择图片</button>
+            </div>
+          </div>
+          <div class="upload-preview-strip">
+            <img src="assets/cover-poster.png" alt="已上传预览图" />
+            <div>
+              <strong>cover-poster.png</strong>
+              <p class="muted">校验通过 · image/png · 864KB</p>
+            </div>
+            <button class="icon-btn" aria-label="移除图片"><svg class="icon"><use href="#i-x"></use></svg></button>
+          </div>
+        </section>
+        <section class="editor">
+          <div class="editor-bar">
+            <div class="editor-title-row"><strong>Prompt</strong><span>新版本正文</span></div>
+          </div>
+          <div class="code-shell">
+            <div class="line-nums">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8</div>
+            <pre>生成一张山地音乐节主视觉海报。
+
+画面中央是几何化山脉和暖色落日，前景保留可放置活动标题的深色区域。
+风格：现代商业插画、清晰层次、高对比度、适合社交媒体封面。
+比例：4:3。
+
+避免：真实文字、logo、水印、低清晰度。</pre>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <main id="diff" class="main detail-main view">
+    <section class="workbench full">
+      <div class="sub-header">
+        <div class="sub-left">
+          <button class="icon-btn bare-icon-btn" aria-label="返回" data-view-button="detail"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+          <h1>Comparing v3 to v4 Latest</h1>
+          <span class="badge badge-image"><svg class="icon"><use href="#i-image"></use></svg>生图</span>
+        </div>
+        <div class="sub-right">
+          <button class="btn"><svg class="icon"><use href="#i-copy"></use></svg>复制 v3</button>
+          <button class="btn btn-primary"><svg class="icon"><use href="#i-copy"></use></svg>复制 Latest</button>
+        </div>
+      </div>
+      <div class="diff-grid">
+        <section class="diff-pane">
+          <div class="diff-pane-head"><h2>v3</h2><span class="muted">图片只预览</span></div>
+          <div class="diff-image"><img src="assets/cover-product.png" alt="历史版本图片预览" /></div>
+          <div class="diff-content">
+            <pre class="diff-line">生成一张用于 AI 工具封面的柔光人像照片。</pre>
+            <pre class="diff-line removed">背景：浅灰渐变工作室，少量装饰元素。</pre>
+            <pre class="diff-line">构图：4:3，主体居中。</pre>
+          </div>
+        </section>
+        <section class="diff-pane">
+          <div class="diff-pane-head"><h2>v4 Latest</h2><span class="muted">图片只预览</span></div>
+          <div class="diff-image"><img src="assets/cover-portrait.png" alt="最新版本图片预览" /></div>
+          <div class="diff-content">
+            <pre class="diff-line">生成一张用于 AI 工具封面的柔光人像照片。</pre>
+            <pre class="diff-line added">背景：浅色工作室背景，带轻微科技感，并保留标题留白。</pre>
+            <pre class="diff-line">构图：4:3，主体居中。</pre>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <main id="import" class="main detail-main view">
+    <section class="import-card">
+      <div class="page-head">
+        <div>
+          <h1>导入 ZIP 备份</h1>
+          <p class="muted">完整替换式导入。确认前不会写入任何数据。</p>
+        </div>
+        <span class="badge badge-lock"><svg class="icon"><use href="#i-package"></use></svg>schemaVersion 2</span>
+      </div>
+      <div class="import-file-box">
+        <span class="drop-zone-icon"><svg class="icon"><use href="#i-package"></use></svg></span>
+        <div>
+          <strong>fh-prompt-manager-export-2026-06-28-1620.zip</strong>
+          <p class="muted">manifest.json、data/*.json、assets/images/*.png 已读取</p>
+        </div>
+        <button class="btn"><svg class="icon"><use href="#i-upload"></use></svg>重新选择</button>
+      </div>
+      <div class="import-grid">
+        <div><strong>6</strong><span>Scene</span></div>
+        <div><strong>42</strong><span>Prompt</span></div>
+        <div><strong>118</strong><span>Version</span></div>
+        <div><strong>36</strong><span>图片</span></div>
+        <div><strong>241</strong><span>使用记录</span></div>
+      </div>
+      <div class="validation-list">
+        <div class="validation-row"><svg class="icon ok"><use href="#i-check"></use></svg><strong>包结构校验通过</strong><span class="muted">必需文件完整，未发现路径穿越</span></div>
+        <div class="validation-row"><svg class="icon ok"><use href="#i-check"></use></svg><strong>实体关系校验通过</strong><span class="muted">Prompt、Version、Scene 引用一致</span></div>
+        <div class="validation-row"><svg class="icon ok"><use href="#i-check"></use></svg><strong>图片资产校验通过</strong><span class="muted">SHA-256、大小、MIME 类型匹配</span></div>
+      </div>
+      <div class="asset-check-row" style="border-color:#fde68a;background:#fffbeb;">
+        <strong>导入确认</strong>
+        <span>执行导入会清空当前本地库，再写入该备份包中的全部数据和图片资产。</span>
+      </div>
+      <div class="page-actions" style="justify-content:flex-end;margin-top:18px;">
+        <button class="btn" data-view-button="library"><svg class="icon"><use href="#i-x"></use></svg>取消</button>
+        <button class="btn btn-primary" data-toast="导入校验通过，等待二次确认"><svg class="icon"><use href="#i-check"></use></svg>执行替换导入</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="version-modal" class="modal-backdrop" role="presentation">
+    <section class="modal wide" role="dialog" aria-modal="true" aria-labelledby="version-modal-title">
+      <div class="modal-head">
+        <div>
+          <h2 id="version-modal-title">v4 当前 · 只读版本预览</h2>
+          <p class="muted">2026/6/28 · 图片与提示词均来自该版本快照</p>
+        </div>
+        <button class="icon-btn" aria-label="关闭" data-close-modal><svg class="icon"><use href="#i-x"></use></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="version-preview-grid">
+          <div>
+            <div class="modal-image-box">
+              <div class="modal-image-ratio"><img class="modal-preview-image" src="assets/cover-portrait.png" alt="v4 版本图片预览" /></div>
+            </div>
+            <div class="tags" style="margin-top:12px;"><span class="tag orange">portrait</span><span class="tag blue">cover</span><span class="tag teal">lighting</span></div>
+          </div>
+          <div class="readonly-editor">
+            <pre>生成一张用于 AI 工具封面的柔光人像照片。
+
+主体：年轻专业女性，正面半身像，神情自信自然。
+场景：浅色工作室背景，带轻微科技感。
+光线：大面积柔光，边缘有淡蓝色轮廓光。
+构图：4:3，主体居中，头肩留白适合叠加标题。</pre>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" data-close-modal>关闭</button>
+        <button class="btn btn-primary" data-toast="已复制该版本提示词"><svg class="icon"><use href="#i-copy"></use></svg>复制提示词</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="scene-modal" class="modal-backdrop" role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="scene-modal-title">
+      <div class="modal-head">
+        <h2 id="scene-modal-title">编辑场景</h2>
+        <button class="icon-btn" aria-label="关闭" data-close-modal><svg class="icon"><use href="#i-x"></use></svg></button>
+      </div>
+      <div class="scene-form-grid">
+        <div class="scene-form-preview">
+          <span class="scene-icon" style="background:#ea580c"><svg class="icon"><use href="#i-image"></use></svg></span>
+          <div><strong>视觉海报</strong><p class="muted">封面、产品图、活动主视觉</p></div>
+          <span class="badge badge-lock"><svg class="icon"><use href="#i-lock"></use></svg>类型锁定</span>
+        </div>
+        <label class="field"><span>场景名称</span><input value="视觉海报" /></label>
+        <label class="field"><span>场景摘要</span><textarea>封面、产品图、活动主视觉</textarea></label>
+        <div class="field">
+          <span>Prompt 类型</span>
+          <div class="type-segment">
+            <button class="type-option disabled" type="button"><strong><svg class="icon"><use href="#i-file"></use></svg>文本</strong><span>该场景已有 Prompt，不能切换类型。</span></button>
+            <button class="type-option active" type="button"><strong><svg class="icon"><use href="#i-image"></use></svg>生图</strong><span>每个版本必须绑定一张图片。</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" data-close-modal>取消</button>
+        <button class="btn btn-primary" data-close-modal>保存场景</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast">已完成</div>
+
+  <script>
+    const views = Array.from(document.querySelectorAll(".view"));
+    const sceneTabs = Array.from(document.querySelectorAll("[data-scene-tab]"));
+    const imageGrid = document.getElementById("image-grid");
+    const textGrid = document.getElementById("text-grid");
+    const libraryTitle = document.getElementById("library-title");
+    const libraryType = document.getElementById("library-type");
+    const librarySummary = document.getElementById("library-summary");
+    const toast = document.getElementById("toast");
+
+    function showView(id) {
+      views.forEach((view) => view.classList.toggle("active", view.id === id));
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+
+    function showToast(text) {
+      toast.textContent = text || "已完成";
+      toast.classList.add("show");
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.remove("show"), 1400);
+    }
+
+    function openModal(id) {
+      document.getElementById(id)?.classList.add("open");
+    }
+
+    function closeModals() {
+      document.querySelectorAll(".modal-backdrop.open").forEach((modal) => modal.classList.remove("open"));
+    }
+
+    function selectScene(kind) {
+      sceneTabs.forEach((item) => item.classList.toggle("active", item.dataset.sceneTab === kind));
+      const isImage = kind === "image";
+      imageGrid.style.display = isImage ? "" : "none";
+      textGrid.style.display = isImage ? "none" : "";
+      libraryTitle.textContent = isImage ? "视觉海报" : "代码重构";
+      libraryType.className = isImage ? "badge badge-image" : "badge badge-text";
+      libraryType.innerHTML = isImage
+        ? '<svg class="icon"><use href="#i-image"></use></svg>生图'
+        : '<svg class="icon"><use href="#i-file"></use></svg>文本';
+      librarySummary.textContent = isImage
+        ? "8 个 Prompt · 最新封面来自 v4 · 最近更新于今天 16:20"
+        : "12 个 Prompt · 文本摘要卡片 · 最近更新于今天 15:42";
+    }
+
+    document.addEventListener("click", (event) => {
+      const viewButton = event.target.closest("[data-view-button]");
+      if (viewButton) showView(viewButton.dataset.viewButton);
+
+      const modalButton = event.target.closest("[data-modal]");
+      if (modalButton) openModal(modalButton.dataset.modal);
+
+      if (event.target.closest("[data-close-modal]")) closeModals();
+
+      const toastButton = event.target.closest("[data-toast]");
+      if (toastButton) showToast(toastButton.dataset.toast);
+
+      const scene = event.target.closest("[data-scene-tab]");
+      if (scene) selectScene(scene.dataset.sceneTab);
+
+      if (event.target.classList.contains("modal-backdrop")) closeModals();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeModals();
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const initialView = params.get("view");
+    if (initialView && document.getElementById(initialView)) showView(initialView);
+    const initialScene = params.get("scene");
+    if (initialScene === "text" || initialScene === "image") selectScene(initialScene);
+    const initialModal = params.get("modal");
+    if (initialModal && document.getElementById(initialModal)) openModal(initialModal);
+  </script>
+</body>
+</html>
