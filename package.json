@@ -21,6 +21,7 @@
     "@vitejs/plugin-react": "latest",
     "dexie": "latest",
     "diff": "latest",
+    "jszip": "^3.10.1",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
