@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import JSZip from "jszip";
 import { resetDatabase } from "../../src/shared/data/db";
 import { repositories } from "../../src/shared/data/repositories";
 import { importExportService } from "../../src/shared/services/importExportService";
 import { promptService } from "../../src/shared/services/promptService";
-import { promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
-import type { ExportPayload } from "../../src/shared/types";
+import { imageAssetFactory, promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
+import type { ExportPayload, ZipBackupManifest } from "../../src/shared/types";
 
 describe("importExportService", () => {
   beforeEach(async () => {
@@ -173,5 +174,79 @@ describe("importExportService", () => {
 
     expect(preview.prompts).toBe(1);
     expect(preview.versions).toBe(0);
+  });
+
+  it("exports a zip backup with manifest, data and image files", async () => {
+    const asset = imageAssetFactory({
+      sha256: "2c8648d103e3dd7ad87660da0f126a1443b6d21ac1bd3ec000c5e24e2373a90c"
+    });
+    await repositories.scenes.put(sceneFactory({ promptType: "image" }));
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory({ imageAssetId: asset.id }));
+    await repositories.imageAssets.put(asset);
+
+    const backup = await importExportService.exportZip();
+    const zip = await JSZip.loadAsync(backup);
+    const manifest = JSON.parse(await zip.file("manifest.json")!.async("string")) as ZipBackupManifest;
+    const data = JSON.parse(await zip.file("data.json")!.async("string")) as ExportPayload;
+
+    expect(manifest.counts.imageAssets).toBe(1);
+    expect(manifest.assets[0]).toMatchObject({
+      id: asset.id,
+      path: `assets/${asset.id}.png`,
+      mimeType: "image/png",
+      size: asset.size,
+      sha256: asset.sha256
+    });
+    await expect(zip.file(manifest.assets[0].path)!.async("string")).resolves.toBe("image-bytes");
+    expect(data.versions[0].imageAssetId).toBe(asset.id);
+  });
+
+  it("rejects zip backups with missing image files", async () => {
+    const asset = imageAssetFactory();
+    const zip = new JSZip();
+    zip.file("manifest.json", JSON.stringify({
+      app: "fh-prompt-manager",
+      schemaVersion: 2,
+      exportedAt: "2026-06-26T08:00:00.000Z",
+      counts: { scenes: 1, prompts: 1, versions: 1, usageRecords: 0, imageAssets: 1 },
+      assets: [{
+        id: asset.id,
+        path: `assets/${asset.id}.png`,
+        mimeType: asset.mimeType,
+        size: asset.size,
+        sha256: asset.sha256
+      }]
+    } satisfies ZipBackupManifest));
+    zip.file("data.json", JSON.stringify({
+      schemaVersion: 2,
+      exportedAt: "2026-06-26T08:00:00.000Z",
+      scenes: [sceneFactory({ promptType: "image" })],
+      prompts: [promptFactory()],
+      versions: [versionFactory({ imageAssetId: asset.id })],
+      usageRecords: []
+    } satisfies ExportPayload));
+
+    await expect(importExportService.previewZipImport(await zip.generateAsync({ type: "blob" }))).rejects.toThrow("图片资源缺失");
+  });
+
+  it("imports image assets from a zip backup", async () => {
+    const asset = imageAssetFactory({
+      sha256: "2c8648d103e3dd7ad87660da0f126a1443b6d21ac1bd3ec000c5e24e2373a90c"
+    });
+    await repositories.scenes.put(sceneFactory({ promptType: "image" }));
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory({ imageAssetId: asset.id }));
+    await repositories.imageAssets.put(asset);
+    const backup = await importExportService.exportZip();
+
+    await resetDatabase();
+    const preview = await importExportService.importZip(backup);
+    const importedAsset = await repositories.imageAssets.get(asset.id);
+    const importedVersions = await repositories.versions.listByPrompt("prompt-refactor");
+
+    expect(preview.imageAssets).toBe(1);
+    expect(importedAsset?.data.byteLength).toBe(asset.size);
+    expect(importedVersions[0].imageAssetId).toBe(asset.id);
   });
 });

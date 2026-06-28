@@ -55,6 +55,6 @@ export const imageAssetService = {
     if (!asset) {
       throw new Error("Image asset not found.");
     }
-    return URL.createObjectURL(new Blob([asset.data], { type: asset.mimeType }));
+    return URL.createObjectURL(new Blob([new Uint8Array(asset.data)], { type: asset.mimeType }));
   }
 };

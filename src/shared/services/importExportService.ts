@@ -1,8 +1,19 @@
-import { EXPORT_SCHEMA_VERSION } from "../constants";
+import JSZip from "jszip";
+import { EXPORT_SCHEMA_VERSION, IMAGE_LIMITS } from "../constants";
 import { db } from "../data/db";
 import { repositories } from "../data/repositories";
 import { normalizePromptVersion } from "../tagUtils";
-import type { ExportPayload, ImportPreview, Prompt, PromptVersion, Scene } from "../types";
+import { imageAssetService } from "./imageAssetService";
+import type {
+  ExportPayload,
+  ImageAsset,
+  ImageMimeType,
+  ImportPreview,
+  Prompt,
+  PromptVersion,
+  Scene,
+  ZipBackupManifest
+} from "../types";
 
 function samePromptKey(prompt: Prompt, sceneNameById: Map<string, string>) {
   return `${sceneNameById.get(prompt.sceneId) || ""}::${prompt.title}`;
@@ -61,6 +72,93 @@ function buildVersionIdMap(
   return { versionIdMap, versionsToAdd };
 }
 
+function imageExtension(mimeType: ImageMimeType) {
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/webp") return "webp";
+  return "png";
+}
+
+function isAllowedMimeType(type: string): type is ImageMimeType {
+  return (IMAGE_LIMITS.allowedMimeTypes as readonly string[]).includes(type);
+}
+
+function isExportPayload(value: unknown): value is ExportPayload {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<ExportPayload>;
+  return candidate.schemaVersion === EXPORT_SCHEMA_VERSION
+    && Array.isArray(candidate.scenes)
+    && Array.isArray(candidate.prompts)
+    && Array.isArray(candidate.versions)
+    && Array.isArray(candidate.usageRecords);
+}
+
+function isZipBackupManifest(value: unknown): value is ZipBackupManifest {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<ZipBackupManifest>;
+  return candidate.app === "fh-prompt-manager"
+    && candidate.schemaVersion === EXPORT_SCHEMA_VERSION
+    && typeof candidate.exportedAt === "string"
+    && Boolean(candidate.counts)
+    && Array.isArray(candidate.assets);
+}
+
+async function parseZipBackup(file: Blob) {
+  if (file.size > IMAGE_LIMITS.maxZipBytes) {
+    throw new Error("备份文件不能超过 200MB。");
+  }
+  const zip = await JSZip.loadAsync(file);
+  const manifestFile = zip.file("manifest.json");
+  const dataFile = zip.file("data.json");
+  if (!manifestFile || !dataFile) {
+    throw new Error("备份文件结构不完整。");
+  }
+
+  const manifest = JSON.parse(await manifestFile.async("string")) as unknown;
+  const payload = JSON.parse(await dataFile.async("string")) as unknown;
+  if (!isZipBackupManifest(manifest) || !isExportPayload(payload)) {
+    throw new Error("导入文件版本不支持。");
+  }
+
+  const imageAssets: ImageAsset[] = [];
+  for (const assetManifest of manifest.assets) {
+    if (!isAllowedMimeType(assetManifest.mimeType)) {
+      throw new Error("图片格式不支持。");
+    }
+    if (assetManifest.size > IMAGE_LIMITS.maxImageBytes) {
+      throw new Error("图片不能超过 10MB。");
+    }
+    const assetFile = zip.file(assetManifest.path);
+    if (!assetFile) {
+      throw new Error(`图片资源缺失：${assetManifest.path}`);
+    }
+    const data = await assetFile.async("arraybuffer");
+    if (data.byteLength !== assetManifest.size) {
+      throw new Error("图片资源大小不匹配。");
+    }
+    const sha256 = await imageAssetService.sha256(new Blob([data], { type: assetManifest.mimeType }));
+    if (sha256 !== assetManifest.sha256) {
+      throw new Error("图片资源校验失败。");
+    }
+    imageAssets.push({
+      id: assetManifest.id,
+      mimeType: assetManifest.mimeType,
+      size: assetManifest.size,
+      sha256,
+      data,
+      createdAt: payload.exportedAt
+    });
+  }
+
+  const imageAssetIds = new Set(imageAssets.map((asset) => asset.id));
+  for (const version of payload.versions) {
+    if (version.imageAssetId && !imageAssetIds.has(version.imageAssetId)) {
+      throw new Error(`图片资源缺失：${version.imageAssetId}`);
+    }
+  }
+
+  return { payload, imageAssets };
+}
+
 export const importExportService = {
   async exportAll(): Promise<ExportPayload> {
     const [scenes, prompts, versions, usageRecords] = await Promise.all([
@@ -79,7 +177,42 @@ export const importExportService = {
     };
   },
 
-  async previewImport(payload: ExportPayload): Promise<ImportPreview> {
+  async exportZip(): Promise<Blob> {
+    const [payload, imageAssets] = await Promise.all([
+      this.exportAll(),
+      db.imageAssets.toArray()
+    ]);
+    const zip = new JSZip();
+    const assets = imageAssets.map((asset) => ({
+      id: asset.id,
+      path: `assets/${asset.id}.${imageExtension(asset.mimeType)}`,
+      mimeType: asset.mimeType,
+      size: asset.size,
+      sha256: asset.sha256
+    }));
+    const manifest: ZipBackupManifest = {
+      app: "fh-prompt-manager",
+      schemaVersion: EXPORT_SCHEMA_VERSION,
+      exportedAt: payload.exportedAt,
+      counts: {
+        scenes: payload.scenes.length,
+        prompts: payload.prompts.length,
+        versions: payload.versions.length,
+        usageRecords: payload.usageRecords.length,
+        imageAssets: imageAssets.length
+      },
+      assets
+    };
+
+    zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+    zip.file("data.json", JSON.stringify(payload, null, 2));
+    for (let index = 0; index < imageAssets.length; index += 1) {
+      zip.file(assets[index].path, new Uint8Array(imageAssets[index].data));
+    }
+    return zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+  },
+
+  async previewImport(payload: ExportPayload, imageAssetCount = 0): Promise<ImportPreview> {
     if (payload.schemaVersion !== EXPORT_SCHEMA_VERSION) {
       throw new Error("Unsupported schema version.");
     }
@@ -108,13 +241,18 @@ export const importExportService = {
       prompts: importedPromptKeys.length,
       versions: versionsToAdd,
       usageRecords: payload.usageRecords.length,
-      imageAssets: 0,
+      imageAssets: imageAssetCount,
       warnings: [...importedSceneNames].length !== payload.scenes.length ? ["导入文件中存在同名 Scene。"] : []
     };
   },
 
-  async importAll(payload: ExportPayload): Promise<ImportPreview> {
-    const preview = await this.previewImport(payload);
+  async previewZipImport(file: Blob): Promise<ImportPreview> {
+    const { payload, imageAssets } = await parseZipBackup(file);
+    return this.previewImport(payload, imageAssets.length);
+  },
+
+  async importAll(payload: ExportPayload, imageAssets: ImageAsset[] = []): Promise<ImportPreview> {
+    const preview = await this.previewImport(payload, imageAssets.length);
     const localScenes = await repositories.scenes.list();
     const localPrompts = await repositories.prompts.list();
     const { localSceneByName, importedSceneNameById, sceneIdMap, promptIdMap } = buildImportMappings(payload, localScenes, localPrompts);
@@ -129,8 +267,9 @@ export const importExportService = {
       }
     }
 
-    await db.transaction("rw", db.scenes, db.prompts, db.versions, db.usageRecords, async () => {
+    await db.transaction("rw", db.scenes, db.prompts, db.versions, db.usageRecords, db.imageAssets, async () => {
       await db.scenes.bulkPut(scenesToAdd);
+      await db.imageAssets.bulkPut(imageAssets);
       const currentPrompts = await db.prompts.toArray();
       const currentScenes = await db.scenes.toArray();
       const sceneNameById = new Map(currentScenes.map((scene) => [scene.id, scene.name]));
@@ -170,5 +309,10 @@ export const importExportService = {
       await db.prompts.bulkPut(promptsToPut);
     });
     return preview;
+  },
+
+  async importZip(file: Blob): Promise<ImportPreview> {
+    const { payload, imageAssets } = await parseZipBackup(file);
+    return this.importAll(payload, imageAssets);
   }
 };
