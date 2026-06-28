@@ -2,18 +2,38 @@ export type Id = string;
 export type IsoDateString = string;
 
 export type SceneColor =
+  | "gray"
   | "blue"
+  | "sky"
   | "teal"
+  | "green"
   | "violet"
   | "pink"
+  | "rose"
+  | "orange"
   | "amber";
 
 export type SceneIcon =
-  | "code"
-  | "pen"
+  | "bot"
+  | "brain"
+  | "book"
+  | "briefcase"
   | "chart"
+  | "code"
+  | "database"
+  | "file"
+  | "flask"
+  | "globe"
   | "image"
-  | "briefcase";
+  | "lightbulb"
+  | "message"
+  | "pen"
+  | "rocket"
+  | "search"
+  | "settings"
+  | "shield"
+  | "sparkles"
+  | "target";
 
 export interface Scene {
   id: Id;
@@ -30,11 +50,10 @@ export interface Prompt {
   id: Id;
   sceneId: Id;
   title: string;
-  description: string;
-  tags: string[];
   favorite: boolean;
   latestVersionId: Id;
   latestVersionNumber: number;
+  sortOrder: number;
   lastUsedAt: IsoDateString | null;
   createdAt: IsoDateString;
   updatedAt: IsoDateString;
@@ -44,7 +63,10 @@ export interface PromptVersion {
   id: Id;
   promptId: Id;
   versionNumber: number;
+  customVersionLabel?: string;
   content: string;
+  description: string;
+  tags: string[];
   note: string;
   createdAt: IsoDateString;
 }

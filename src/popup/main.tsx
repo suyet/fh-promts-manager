@@ -15,14 +15,14 @@ function PopupBootstrap() {
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
 
   async function refresh(nextSearch = search, nextSceneId = selectedSceneId) {
-    const [loadedScenes, loadedMatches, recentCandidates] = await Promise.all([
+    const [loadedScenes, loadedMatches, recentItems] = await Promise.all([
       repositories.scenes.list(),
       promptService.searchPrompts({ text: nextSearch, sceneId: nextSceneId || undefined }),
-      promptService.searchPrompts({ text: "", sceneId: nextSceneId || undefined })
+      promptService.listRecentPrompts(5, nextSceneId || undefined)
     ]);
     setScenes(loadedScenes);
     setMatches(loadedMatches);
-    setRecent(recentCandidates.filter((item) => item.prompt.lastUsedAt).slice(0, 5));
+    setRecent(recentItems);
   }
 
   useEffect(() => {
@@ -40,6 +40,7 @@ function PopupBootstrap() {
   return (
     <PopupApp
       scenes={scenes}
+      selectedSceneId={selectedSceneId}
       recent={recent}
       matches={matches}
       onSearch={(value) => {
@@ -50,9 +51,7 @@ function PopupBootstrap() {
         setSelectedSceneId(sceneId);
         void refresh(search, sceneId);
       }}
-      onCopy={(promptId) => {
-        void handleCopy(promptId);
-      }}
+      onCopy={handleCopy}
       onOpenManager={() => chrome.tabs.create({ url: chrome.runtime.getURL("manager.html") })}
     />
   );

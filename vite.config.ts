@@ -9,6 +9,14 @@ export default defineConfig({
       input: {
         manager: resolve(__dirname, "manager.html"),
         popup: resolve(__dirname, "popup.html")
+      },
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/@codemirror") || id.includes("node_modules/@lezer")) {
+            return "codemirror";
+          }
+          return undefined;
+        }
       }
     }
   }

@@ -1,38 +1,52 @@
-import { Copy, GitCompare } from "lucide-react";
+import { GitCompare } from "lucide-react";
 import type { PromptVersion } from "../types";
-import { Button } from "./Button";
 import { IconButton } from "./IconButton";
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+}
 
 export function VersionHistory({
   versions,
   latestVersionId,
-  onCopy,
   onCompareToLatest
 }: {
   versions: PromptVersion[];
   latestVersionId: string;
-  onCopy: (versionId: string) => void;
   onCompareToLatest: (versionId: string) => void;
 }) {
+  const orderedVersions = [...versions].sort((left, right) => {
+    return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+  });
+
   return (
-    <section>
-      <h2>版本历史</h2>
+    <section className="version-section">
       <div className="version-list">
-        {versions.map((version) => {
+        {orderedVersions.map((version) => {
           const isLatest = version.id === latestVersionId;
+          const label = version.customVersionLabel || `v${version.versionNumber}`;
           return (
-            <div className="version-row" key={version.id}>
-              <div>
-                <strong>v{version.versionNumber}{isLatest ? " Latest" : ""}</strong>
-                <p>{version.note}</p>
-              </div>
-              <div className="card-icon-actions">
-                {!isLatest && (
-                  <Button onClick={() => onCompareToLatest(version.id)}>
-                    <GitCompare className="icon" />Compare to Latest
-                  </Button>
-                )}
-                <IconButton label="复制版本" icon={<Copy className="icon" />} onClick={() => onCopy(version.id)} />
+            <div className={isLatest ? "version-row current" : "version-row"} data-testid="version-card" key={version.id}>
+              <div className="version-info">
+                <div className="version-head-line">
+                  <strong>{label}{isLatest ? " 当前" : ""}</strong>
+                  {!isLatest && (
+                    <IconButton
+                      className="bare-icon-btn"
+                      label="与最新版本对比"
+                      icon={<GitCompare className="icon" />}
+                      onClick={() => onCompareToLatest(version.id)}
+                    />
+                  )}
+                </div>
+                <p className="version-highlight">{version.description}</p>
+                <div className="version-card-footer">
+                  <span className="version-date">{formatDate(version.createdAt)}</span>
+                  <span className="version-tags">
+                    {version.tags.map((tag) => <span className="tag" key={tag}>{tag}</span>)}
+                  </span>
+                </div>
               </div>
             </div>
           );

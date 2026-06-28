@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TopBar } from "../shared/components/TopBar";
-import { SCENE_COLORS, SCENE_ICONS } from "../shared/constants";
+import { Toast } from "../shared/components/Toast";
 import { db } from "../shared/data/db";
 import { repositories } from "../shared/data/repositories";
 import { diffService, type VersionDiff } from "../shared/services/diffService";
@@ -9,7 +9,8 @@ import { downloadJsonFile, downloadTextFile } from "../shared/services/downloadS
 import { importExportService } from "../shared/services/importExportService";
 import { promptService } from "../shared/services/promptService";
 import "../shared/styles/app.css";
-import type { ExportPayload, ImportPreview, PromptVersion, PromptWithLatest, Scene, SceneColor, SceneIcon, UsageSource } from "../shared/types";
+import type { ExportPayload, ImportPreview, PromptVersion, PromptWithLatest, Scene, UsageSource } from "../shared/types";
+import { SceneFormDialog, type SceneFormInput } from "./components/SceneFormDialog";
 import { DiffPage } from "./pages/DiffPage";
 import { ImportPage } from "./pages/ImportPage";
 import { LibraryPage } from "./pages/LibraryPage";
@@ -22,6 +23,7 @@ export function ManagerApp() {
   const [search, setSearch] = useState("");
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [items, setItems] = useState<PromptWithLatest[]>([]);
+  const [sceneCounts, setSceneCounts] = useState<Record<string, number>>({});
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [versions, setVersions] = useState<PromptVersion[]>([]);
@@ -30,14 +32,28 @@ export function ManagerApp() {
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importPayload, setImportPayload] = useState<ExportPayload | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [sceneFormScene, setSceneFormScene] = useState<Scene | null | undefined>(undefined);
+  const [isSortingScenes, setIsSortingScenes] = useState(false);
+  const [draftScenes, setDraftScenes] = useState<Scene[]>([]);
+  const [isSortingPrompts, setIsSortingPrompts] = useState(false);
+  const [draftItems, setDraftItems] = useState<PromptWithLatest[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    void loadScenes();
+    void loadScenes().catch(() => undefined);
   }, []);
 
   useEffect(() => {
-    void refreshItems();
-  }, [search, selectedSceneId]);
+    return () => {
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (scenes.length > 0 && !selectedSceneId) return;
+    void refreshItems().catch(() => undefined);
+  }, [search, selectedSceneId, scenes.length]);
 
   useEffect(() => {
     if (!selectedPromptId) {
@@ -49,8 +65,25 @@ export function ManagerApp() {
 
   const selectedItem = items.find((item) => item.prompt.id === selectedPromptId) ?? null;
 
+  function showToast(message: string) {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    setToast(message);
+    toastTimerRef.current = window.setTimeout(() => setToast(null), 1200);
+  }
+
+  function showCopyToast() {
+    showToast("复制成功");
+  }
+
   async function loadScenes(preferredSceneId?: string | null) {
-    const loadedScenes = await repositories.scenes.list();
+    const [loadedScenes, allPrompts] = await Promise.all([
+      repositories.scenes.list(),
+      repositories.prompts.list()
+    ]);
+    setSceneCounts(allPrompts.reduce<Record<string, number>>((accumulator, prompt) => {
+      accumulator[prompt.sceneId] = (accumulator[prompt.sceneId] ?? 0) + 1;
+      return accumulator;
+    }, {}));
     setScenes(loadedScenes);
     setSelectedSceneId((current) => {
       if (preferredSceneId !== undefined) return preferredSceneId;
@@ -60,7 +93,15 @@ export function ManagerApp() {
   }
 
   async function refreshItems() {
-    await promptService.searchPrompts({ text: search, sceneId: selectedSceneId || undefined }).then(setItems);
+    const [filteredItems, allPrompts] = await Promise.all([
+      promptService.searchPrompts({ text: search, sceneId: selectedSceneId || undefined }),
+      repositories.prompts.list()
+    ]);
+    setItems(filteredItems);
+    setSceneCounts(allPrompts.reduce<Record<string, number>>((accumulator, prompt) => {
+      accumulator[prompt.sceneId] = (accumulator[prompt.sceneId] ?? 0) + 1;
+      return accumulator;
+    }, {}));
   }
 
   function openPrompt(promptId: string) {
@@ -85,56 +126,68 @@ export function ManagerApp() {
   async function copyPrompt(promptId: string, source: UsageSource = "manager") {
     const item = items.find((candidate) => candidate.prompt.id === promptId);
     if (!item) return;
-    await copyText(item.latestVersion.content);
-    await promptService.recordUsage(item.prompt.id, item.latestVersion.id, source);
-    await refreshItems();
+    try {
+      await copyText(item.latestVersion.content);
+      await promptService.recordUsage(item.prompt.id, item.latestVersion.id, source);
+      showCopyToast();
+      await refreshItems();
+    } catch {
+      showToast("复制失败，请重试");
+    }
   }
 
   async function copyVersion(versionId: string, source: UsageSource = "version-history") {
     const version = versions.find((item) => item.id === versionId);
     if (!version || !selectedItem) return;
-    await copyText(version.content);
-    await promptService.recordUsage(selectedItem.prompt.id, version.id, source);
+    try {
+      await copyText(version.content);
+      await promptService.recordUsage(selectedItem.prompt.id, version.id, source);
+      showCopyToast();
+      await refreshItems();
+    } catch {
+      showToast("复制失败，请重试");
+    }
+  }
+
+  async function togglePromptFavorite(promptId: string) {
+    const item = items.find((candidate) => candidate.prompt.id === promptId);
+    if (!item) return;
+    await promptService.updatePrompt(promptId, {
+      title: item.prompt.title,
+      favorite: !item.prompt.favorite
+    });
     await refreshItems();
   }
 
-  async function createScene() {
-    const name = window.prompt("场景名称");
-    if (!name?.trim()) return;
-    const description = window.prompt("场景摘要", "") ?? "";
-    const icon = parseSceneIcon(window.prompt("场景图标：code / pen / chart / image / briefcase", "briefcase"));
-    const color = parseSceneColor(window.prompt("场景颜色：blue / teal / violet / pink / amber", "teal"));
+  async function createScene(input: SceneFormInput) {
     const timestamp = new Date().toISOString();
     const scene: Scene = {
       id: crypto.randomUUID(),
-      name: name.trim(),
-      description: description.trim(),
-      icon,
-      color,
+      name: input.name,
+      description: input.description,
+      icon: input.icon,
+      color: input.color,
       sortOrder: scenes.reduce((maximum, item) => Math.max(maximum, item.sortOrder), 0) + 1,
       createdAt: timestamp,
       updatedAt: timestamp
     };
     await repositories.scenes.put(scene);
+    setSceneFormScene(undefined);
     await loadScenes(scene.id);
   }
 
-  async function editScene(sceneId: string) {
+  async function editScene(sceneId: string, input: SceneFormInput) {
     const scene = scenes.find((item) => item.id === sceneId);
     if (!scene) return;
-    const name = window.prompt("场景名称", scene.name);
-    if (!name?.trim()) return;
-    const description = window.prompt("场景摘要", scene.description) ?? scene.description;
-    const icon = parseSceneIcon(window.prompt("场景图标：code / pen / chart / image / briefcase", scene.icon), scene.icon);
-    const color = parseSceneColor(window.prompt("场景颜色：blue / teal / violet / pink / amber", scene.color), scene.color);
     await repositories.scenes.put({
       ...scene,
-      name: name.trim(),
-      description: description.trim(),
-      icon,
-      color,
+      name: input.name,
+      description: input.description,
+      icon: input.icon,
+      color: input.color,
       updatedAt: new Date().toISOString()
     });
+    setSceneFormScene(undefined);
     await loadScenes(sceneId);
     await refreshItems();
   }
@@ -155,24 +208,57 @@ export function ManagerApp() {
     await loadScenes(nextSceneId);
   }
 
-  async function moveScene(sceneId: string, direction: "up" | "down") {
-    const sortedScenes = [...scenes].sort((a, b) => a.sortOrder - b.sortOrder);
-    const currentIndex = sortedScenes.findIndex((scene) => scene.id === sceneId);
-    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= sortedScenes.length) return;
-    const current = sortedScenes[currentIndex];
-    const target = sortedScenes[targetIndex];
-    await repositories.scenes.put({ ...current, sortOrder: target.sortOrder, updatedAt: new Date().toISOString() });
-    await repositories.scenes.put({ ...target, sortOrder: current.sortOrder, updatedAt: new Date().toISOString() });
-    await loadScenes(sceneId);
+  async function toggleSceneSort() {
+    if (!isSortingScenes) {
+      setDraftScenes(scenes);
+      setIsSortingScenes(true);
+      return;
+    }
+    const timestamp = new Date().toISOString();
+    await repositories.scenes.bulkPut(draftScenes.map((scene, index) => ({
+      ...scene,
+      sortOrder: index + 1,
+      updatedAt: timestamp
+    })));
+    setIsSortingScenes(false);
+    setDraftScenes([]);
+    await loadScenes(selectedSceneId);
   }
 
-  function parseSceneIcon(value: string | null, fallback: SceneIcon = "briefcase"): SceneIcon {
-    return SCENE_ICONS.includes(value as SceneIcon) ? value as SceneIcon : fallback;
+  function reorderDraftScenes(draggedSceneId: string, targetSceneId: string) {
+    setDraftScenes((current) => {
+      const next = [...current];
+      const draggedIndex = next.findIndex((scene) => scene.id === draggedSceneId);
+      const targetIndex = next.findIndex((scene) => scene.id === targetSceneId);
+      if (draggedIndex < 0 || targetIndex < 0) return current;
+      const [dragged] = next.splice(draggedIndex, 1);
+      next.splice(targetIndex, 0, dragged);
+      return next;
+    });
   }
 
-  function parseSceneColor(value: string | null, fallback: SceneColor = "teal"): SceneColor {
-    return Object.keys(SCENE_COLORS).includes(value || "") ? value as SceneColor : fallback;
+  async function togglePromptSort() {
+    if (!isSortingPrompts) {
+      setDraftItems(items);
+      setIsSortingPrompts(true);
+      return;
+    }
+    await promptService.reorderPrompts(draftItems.map((item) => item.prompt.id));
+    setIsSortingPrompts(false);
+    setDraftItems([]);
+    await refreshItems();
+  }
+
+  function reorderDraftPrompts(draggedPromptId: string, targetPromptId: string) {
+    setDraftItems((current) => {
+      const next = [...current];
+      const draggedIndex = next.findIndex((item) => item.prompt.id === draggedPromptId);
+      const targetIndex = next.findIndex((item) => item.prompt.id === targetPromptId);
+      if (draggedIndex < 0 || targetIndex < 0) return current;
+      const [dragged] = next.splice(draggedIndex, 1);
+      next.splice(targetIndex, 0, dragged);
+      return next;
+    });
   }
 
   async function createPrompt(input: { title: string; description: string; tags: string[]; content: string }) {
@@ -188,15 +274,21 @@ export function ManagerApp() {
       content,
       note: "初始版本"
     });
-    await promptService.searchPrompts({ text: search, sceneId: selectedSceneId }).then(setItems);
+    await refreshItems();
     setSelectedPromptId(prompt.id);
     setVersions(await repositories.versions.listByPrompt(prompt.id));
     setView("detail");
+    showToast("已创建 Prompt");
   }
 
   async function exportAll() {
-    const payload = await importExportService.exportAll();
-    downloadJsonFile(`fh-prompt-manager-${new Date().toISOString().slice(0, 10)}.json`, payload);
+    try {
+      const payload = await importExportService.exportAll();
+      downloadJsonFile(`fh-prompt-manager-${new Date().toISOString().slice(0, 10)}.json`, payload);
+      showToast("导出完成");
+    } catch {
+      showToast("导出失败，请重试");
+    }
   }
 
   function isExportPayload(value: unknown): value is ExportPayload {
@@ -244,34 +336,47 @@ export function ManagerApp() {
     await loadScenes();
     await refreshItems();
     setView("library");
+    showToast("导入完成");
   }
 
   let page = (
     <LibraryPage
-      scenes={scenes}
+      scenes={isSortingScenes ? draftScenes : scenes}
       selectedSceneId={selectedSceneId}
-      prompts={items}
+      isSortingScenes={isSortingScenes}
+      sceneCounts={sceneCounts}
+      prompts={isSortingPrompts ? draftItems : items}
+      isSortingPrompts={isSortingPrompts}
+      isPromptSortDisabled={search.trim().length > 0}
       onSelectScene={setSelectedSceneId}
       onOpenPrompt={openPrompt}
       onCopyPrompt={(promptId) => {
         void copyPrompt(promptId);
+      }}
+      onTogglePromptFavorite={(promptId) => {
+        void togglePromptFavorite(promptId);
       }}
       onCreatePrompt={() => {
         setSelectedPromptId(null);
         setView("create");
       }}
       onCreateScene={() => {
-        void createScene();
+        setSceneFormScene(null);
       }}
       onEditScene={(sceneId) => {
-        void editScene(sceneId);
+        setSceneFormScene(scenes.find((scene) => scene.id === sceneId) ?? undefined);
       }}
       onDeleteScene={(sceneId) => {
         void deleteScene(sceneId);
       }}
-      onMoveScene={(sceneId, direction) => {
-        void moveScene(sceneId, direction);
+      onToggleSceneSort={() => {
+        void toggleSceneSort();
       }}
+      onReorderScene={reorderDraftScenes}
+      onTogglePromptSort={() => {
+        void togglePromptSort();
+      }}
+      onReorderPrompt={reorderDraftPrompts}
     />
   );
 
@@ -294,9 +399,10 @@ export function ManagerApp() {
           });
         }}
         onSaveVersion={(content) => {
-          void promptService.saveNewVersion(selectedItem.prompt.id, { content, note: "手动保存" }).then(() => {
+          void promptService.saveNewVersion(selectedItem.prompt.id, { ...content, note: "手动保存" }).then(() => {
             void refreshItems();
             void repositories.versions.listByPrompt(selectedItem.prompt.id).then(setVersions);
+            showToast("已保存新版本");
           });
         }}
         onSaveMetadata={(input) => {
@@ -308,16 +414,11 @@ export function ManagerApp() {
         onToggleFavorite={() => {
           void promptService.updatePrompt(selectedItem.prompt.id, {
             title: selectedItem.prompt.title,
-            description: selectedItem.prompt.description,
-            tags: selectedItem.prompt.tags,
             favorite: !selectedItem.prompt.favorite
           }).then(refreshItems);
         }}
-        onCopyVersion={(versionId) => {
-          void copyVersion(versionId);
-        }}
         onCopyEditor={(content) => {
-          void copyText(content);
+          void copyText(content).then(showCopyToast).catch(() => showToast("复制失败，请重试"));
         }}
         onDownloadEditor={(content) => {
           downloadTextFile(`${selectedItem.prompt.title}.md`, content, "text/markdown;charset=utf-8");
@@ -366,6 +467,10 @@ export function ManagerApp() {
       <TopBar
         search={search}
         onSearch={(value) => {
+          if (value.trim() && isSortingPrompts) {
+            setIsSortingPrompts(false);
+            setDraftItems([]);
+          }
           setSearch(value);
           setView("library");
         }}
@@ -374,7 +479,22 @@ export function ManagerApp() {
           void exportAll();
         }}
       />
+      {sceneFormScene !== undefined && (
+        <SceneFormDialog
+          key={sceneFormScene?.id ?? "new-scene"}
+          scene={sceneFormScene}
+          onCancel={() => setSceneFormScene(undefined)}
+          onSave={(input) => {
+            if (sceneFormScene) {
+              void editScene(sceneFormScene.id, input);
+            } else {
+              void createScene(input);
+            }
+          }}
+        />
+      )}
       {page}
+      <Toast message={toast} />
     </>
   );
 }

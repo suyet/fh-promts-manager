@@ -1,4 +1,4 @@
-import { Download, Mail, Moon, Search, Upload } from "lucide-react";
+import { Download, Info, Search, Upload, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "./Button";
 import { IconButton } from "./IconButton";
@@ -15,6 +15,7 @@ export function TopBar({
   onExport: () => void;
 }) {
   const [draft, setDraft] = useState(search);
+  const [showContact, setShowContact] = useState(false);
 
   useEffect(() => {
     setDraft(search);
@@ -27,20 +28,46 @@ export function TopBar({
 
   return (
     <header className="topbar">
-      <div className="brand"><span className="brand-mark">FH</span><span>FH Prompt Manager</span></div>
-      <form className="top-search" role="search" onSubmit={submitSearch}>
-        <Search className="icon" />
-        <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="搜索标题、标签、正文" />
-        <button className="search-submit" type="submit" aria-label="搜索">
+      <div className="brand">
+        <img className="brand-logo" src="/icons/fh-pm-logo.png" alt="FH Prompt Manager logo" />
+        <span className="brand-name">FH Prompt Manager</span>
+      </div>
+      <form className="top-search-form" role="search" onSubmit={submitSearch}>
+        <div className="top-search">
           <Search className="icon" />
+          <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="搜索标题、标签、正文" />
+        </div>
+        <button className="search-submit" type="submit" aria-label="搜索">
+          搜索
         </button>
       </form>
       <div className="top-actions">
-        <Button onClick={onImport}><Upload className="icon" />导入</Button>
-        <Button onClick={onExport}><Download className="icon" />导出</Button>
-        <Button onClick={() => window.location.href = "mailto:author@example.com"}><Mail className="icon" />联系作者</Button>
-        <IconButton label="切换明暗模式" icon={<Moon className="icon" />} />
+        <Button className="top-action-button" onClick={onImport}><Upload className="icon" />导入</Button>
+        <Button className="top-action-button" onClick={onExport}><Download className="icon" />导出</Button>
+        <Button className="top-action-button" onClick={() => setShowContact(true)}><Info className="icon" />关于应用</Button>
       </div>
+      {showContact && (
+        <div className="modal-backdrop">
+          <section className="modal contact-modal" role="dialog" aria-modal="true" aria-labelledby="contact-title">
+            <div className="modal-head">
+              <h2 id="contact-title">关于应用</h2>
+              <IconButton label="关闭" icon={<X className="icon" />} onClick={() => setShowContact(false)} />
+            </div>
+            <div className="contact-lines">
+              <p className="contact-intro">完全离线的本地提示词管理插件(支持chrome/edge)</p>
+              <p className="contact-subtitle">核心亮点：</p>
+              <ul className="contact-features">
+                <li>🧩 三重颗粒度的提示词资产管理</li>
+                <li>🔒 本地优先，完全离线</li>
+                <li>📦 一键导入导出，团队共享</li>
+              </ul>
+              <p className="contact-warning">提醒：删除插件数据不会保留，请提前导出备份</p>
+              <p>👤 作者：烽火技服-姜萌</p>
+              <p>📧 邮箱：mjiang@fiberhome.com</p>
+            </div>
+          </section>
+        </div>
+      )}
     </header>
   );
 }

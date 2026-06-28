@@ -27,15 +27,15 @@ export const promptService = {
     const timestamp = now();
     const promptId = id();
     const versionId = id();
+    const existingPrompts = await repositories.prompts.listByScene(input.sceneId);
     const prompt: Prompt = {
       id: promptId,
       sceneId: input.sceneId,
       title: input.title,
-      description: input.description,
-      tags: input.tags,
       favorite: input.favorite,
       latestVersionId: versionId,
       latestVersionNumber: 1,
+      sortOrder: existingPrompts.reduce((maximum, item) => Math.max(maximum, item.sortOrder), 0) + 1,
       lastUsedAt: null,
       createdAt: timestamp,
       updatedAt: timestamp
@@ -45,6 +45,8 @@ export const promptService = {
       promptId,
       versionNumber: 1,
       content: input.content,
+      description: input.description,
+      tags: input.tags,
       note: input.note,
       createdAt: timestamp
     };
@@ -55,7 +57,10 @@ export const promptService = {
     return prompt;
   },
 
-  async saveNewVersion(promptId: string, input: { content: string; note: string }): Promise<Prompt> {
+  async saveNewVersion(
+    promptId: string,
+    input: { content: string; description: string; tags: string[]; note: string; customVersionLabel?: string }
+  ): Promise<Prompt> {
     const prompt = await repositories.prompts.get(promptId);
     if (!prompt) throw new Error("Prompt not found.");
     const timestamp = now();
@@ -63,7 +68,10 @@ export const promptService = {
       id: id(),
       promptId,
       versionNumber: prompt.latestVersionNumber + 1,
+      customVersionLabel: input.customVersionLabel?.trim() || undefined,
       content: input.content,
+      description: input.description,
+      tags: input.tags,
       note: input.note,
       createdAt: timestamp
     };
@@ -82,15 +90,13 @@ export const promptService = {
 
   async updatePrompt(
     promptId: string,
-    input: { title: string; description: string; tags: string[]; favorite: boolean }
+    input: { title: string; favorite: boolean }
   ): Promise<Prompt> {
     const prompt = await repositories.prompts.get(promptId);
     if (!prompt) throw new Error("Prompt not found.");
     const updated: Prompt = {
       ...prompt,
       title: input.title,
-      description: input.description,
-      tags: input.tags,
       favorite: input.favorite,
       updatedAt: now()
     };
@@ -108,12 +114,38 @@ export const promptService = {
       const latestVersion = await repositories.versions.get(prompt.latestVersionId);
       const scene = sceneById.get(prompt.sceneId);
       if (!latestVersion || !scene) continue;
-      const searchable = [prompt.title, prompt.description, prompt.tags.join(" "), latestVersion.content].join(" ");
+      const searchable = [prompt.title, latestVersion.description, latestVersion.tags.join(" "), latestVersion.content].join(" ");
       if (!text || includesText(searchable, text)) {
         results.push({ prompt, latestVersion, scene });
       }
     }
-    return results.sort((a, b) => (b.prompt.lastUsedAt || "").localeCompare(a.prompt.lastUsedAt || ""));
+    return results.sort((a, b) => a.prompt.sortOrder - b.prompt.sortOrder);
+  },
+
+  async listRecentPrompts(limit: number, sceneId?: string): Promise<PromptWithLatest[]> {
+    const [prompts, scenes] = await Promise.all([repositories.prompts.list(), repositories.scenes.list()]);
+    const sceneById = new Map(scenes.map((scene) => [scene.id, scene]));
+    const recentPrompts = prompts
+      .filter((prompt) => prompt.lastUsedAt && (!sceneId || prompt.sceneId === sceneId))
+      .sort((a, b) => (b.lastUsedAt || "").localeCompare(a.lastUsedAt || "") || a.sortOrder - b.sortOrder);
+    const results: PromptWithLatest[] = [];
+
+    for (const prompt of recentPrompts.slice(0, limit)) {
+      const latestVersion = await repositories.versions.get(prompt.latestVersionId);
+      const scene = sceneById.get(prompt.sceneId);
+      if (!latestVersion || !scene) continue;
+      results.push({ prompt, latestVersion, scene });
+    }
+
+    return results;
+  },
+
+  async reorderPrompts(promptIds: string[]) {
+    const prompts = await Promise.all(promptIds.map((promptId) => repositories.prompts.get(promptId)));
+    const timestamp = now();
+    await repositories.prompts.bulkPut(prompts.flatMap((prompt, index) => (
+      prompt ? [{ ...prompt, sortOrder: index + 1, updatedAt: timestamp }] : []
+    )));
   },
 
   async recordUsage(promptId: string, versionId: string, source: UsageSource) {

@@ -27,6 +27,8 @@ describe("promptService", () => {
     expect(created.latestVersionNumber).toBe(1);
     expect(versions).toHaveLength(1);
     expect(versions[0].content).toBe("content v1");
+    expect(versions[0].description).toBe("desc");
+    expect(versions[0].tags).toEqual(["tag-a"]);
   });
 
   it("saving content creates a new immutable version", async () => {
@@ -36,38 +38,75 @@ describe("promptService", () => {
 
     const updated = await promptService.saveNewVersion("prompt-refactor", {
       content: "content v2",
-      note: "增强约束"
+      note: "增强约束",
+      description: "v2 亮点",
+      tags: ["v2"],
+      customVersionLabel: "V5大概答复"
     });
 
     const versions = await repositories.versions.listByPrompt("prompt-refactor");
     expect(updated.latestVersionNumber).toBe(2);
     expect(versions.map((version) => version.content)).toEqual(["请重构下面的代码。", "content v2"]);
+    expect(versions[1]).toMatchObject({
+      versionNumber: 2,
+      customVersionLabel: "V5大概答复",
+      description: "v2 亮点",
+      tags: ["v2"]
+    });
   });
 
-  it("searches title, tags, and latest content", async () => {
+  it("searches title, latest version tags, latest highlight, and latest content", async () => {
     await repositories.scenes.put(sceneFactory());
-    await repositories.prompts.put(promptFactory({ tags: ["review"] }));
-    await repositories.versions.put(versionFactory({ content: "包含边界行为说明" }));
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory({
+      content: "包含边界行为说明",
+      description: "最新亮点",
+      tags: ["review"]
+    }));
 
     await expect(promptService.searchPrompts({ text: "review" })).resolves.toHaveLength(1);
+    await expect(promptService.searchPrompts({ text: "最新亮点" })).resolves.toHaveLength(1);
+    await expect(promptService.searchPrompts({ text: "old-tag" })).resolves.toHaveLength(0);
     await expect(promptService.searchPrompts({ text: "边界行为" })).resolves.toHaveLength(1);
     await expect(promptService.searchPrompts({ text: "不存在" })).resolves.toHaveLength(0);
   });
 
-  it("updates prompt metadata without storing prompt content", async () => {
+  it("returns prompts by user-defined order", async () => {
+    await repositories.scenes.put(sceneFactory());
+    await repositories.prompts.put(promptFactory({
+      id: "prompt-second",
+      title: "Second Prompt",
+      latestVersionId: "version-second",
+      sortOrder: 2
+    }));
+    await repositories.prompts.put(promptFactory({
+      id: "prompt-first",
+      title: "First Prompt",
+      latestVersionId: "version-first",
+      sortOrder: 1
+    }));
+    await repositories.versions.bulkPut([
+      versionFactory({ id: "version-second", promptId: "prompt-second" }),
+      versionFactory({ id: "version-first", promptId: "prompt-first" })
+    ]);
+
+    await expect(promptService.searchPrompts({ text: "" })).resolves.toMatchObject([
+      { prompt: { id: "prompt-first" } },
+      { prompt: { id: "prompt-second" } }
+    ]);
+  });
+
+  it("updates prompt title and favorite without touching versions", async () => {
     await repositories.scenes.put(sceneFactory());
     await repositories.prompts.put(promptFactory());
     await repositories.versions.put(versionFactory());
 
     const updated = await promptService.updatePrompt("prompt-refactor", {
       title: "Updated title",
-      description: "Updated desc",
-      tags: ["updated"],
       favorite: false
     });
 
     expect(updated.title).toBe("Updated title");
-    expect(updated.tags).toEqual(["updated"]);
     expect("content" in updated).toBe(false);
     await expect(repositories.versions.listByPrompt("prompt-refactor")).resolves.toHaveLength(1);
   });
@@ -85,5 +124,36 @@ describe("promptService", () => {
     await expect(repositories.prompts.get("prompt-refactor")).resolves.toBeUndefined();
     await expect(repositories.versions.listByPrompt("prompt-refactor")).resolves.toEqual([]);
     await expect(repositories.usageRecords.listRecent(10)).resolves.toEqual([]);
+  });
+
+  it("returns recent prompts ordered by last usage time instead of prompt sort order", async () => {
+    await repositories.scenes.put(sceneFactory());
+    await repositories.prompts.bulkPut([
+      promptFactory({
+        id: "prompt-first",
+        title: "First Prompt",
+        latestVersionId: "version-first",
+        sortOrder: 1
+      }),
+      promptFactory({
+        id: "prompt-second",
+        title: "Second Prompt",
+        latestVersionId: "version-second",
+        sortOrder: 2
+      })
+    ]);
+    await repositories.versions.bulkPut([
+      versionFactory({ id: "version-first", promptId: "prompt-first", content: "first content" }),
+      versionFactory({ id: "version-second", promptId: "prompt-second", content: "second content" })
+    ]);
+
+    await promptService.recordUsage("prompt-first", "version-first", "manager");
+    vi.setSystemTime(new Date("2026-06-26T08:01:00.000Z"));
+    await promptService.recordUsage("prompt-second", "version-second", "manager");
+
+    await expect(promptService.listRecentPrompts(5)).resolves.toMatchObject([
+      { prompt: { id: "prompt-second" } },
+      { prompt: { id: "prompt-first" } }
+    ]);
   });
 });

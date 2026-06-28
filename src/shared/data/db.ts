@@ -10,11 +10,30 @@ export class FhPromptDatabase extends Dexie {
 
   constructor(name = DB_NAME) {
     super(name);
-    this.version(DB_VERSION).stores({
+    this.version(1).stores({
       scenes: "id, name, sortOrder, updatedAt",
       prompts: "id, sceneId, title, latestVersionId, latestVersionNumber, lastUsedAt, updatedAt",
       versions: "id, promptId, versionNumber, createdAt",
       usageRecords: "id, promptId, versionId, usedAt, source"
+    });
+    this.version(DB_VERSION).stores({
+      scenes: "id, name, sortOrder, updatedAt",
+      prompts: "id, sceneId, title, latestVersionId, latestVersionNumber, sortOrder, lastUsedAt, updatedAt",
+      versions: "id, promptId, versionNumber, createdAt",
+      usageRecords: "id, promptId, versionId, usedAt, source"
+    }).upgrade(async (transaction) => {
+      const prompts = await transaction.table<Prompt, string>("prompts").toArray();
+      const byScene = new Map<string, Prompt[]>();
+      for (const prompt of prompts) {
+        byScene.set(prompt.sceneId, [...(byScene.get(prompt.sceneId) ?? []), prompt]);
+      }
+      for (const scenePrompts of byScene.values()) {
+        scenePrompts.sort((first, second) => first.createdAt.localeCompare(second.createdAt));
+        await transaction.table<Prompt, string>("prompts").bulkPut(scenePrompts.map((prompt, index) => ({
+          ...prompt,
+          sortOrder: prompt.sortOrder ?? index + 1
+        })));
+      }
     });
   }
 }
