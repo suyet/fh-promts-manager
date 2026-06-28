@@ -1,6 +1,7 @@
 import { ArrowLeft, Save } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../shared/components/Button";
+import { FileUploadBox } from "../../shared/components/FileUploadBox";
 import { IconButton } from "../../shared/components/IconButton";
 import { FIELD_LIMITS } from "../../shared/constants";
 import { PromptWorkspace } from "../components/PromptWorkspace";
@@ -58,27 +59,43 @@ export function NewPromptPage({
             />
           </label>
         </div>
-        {isImagePrompt && (
-          <label className="field image-upload-field">
-            <span>上传封面图片</span>
-            <input
-              aria-label="上传封面图片"
-              type="file"
+        {isImagePrompt ? (
+          <div className="image-create-shell">
+            <FileUploadBox
+              label="上传封面图片"
+              actionLabel="选择图片"
+              ariaLabel="上传封面图片"
               accept="image/png,image/jpeg,image/webp"
-              onChange={(event) => setImageFile(event.target.files?.[0])}
+              file={imageFile}
+              preview
+              className="image-create-upload"
+              onChange={setImageFile}
             />
-          </label>
+            <div className="image-create-editor">
+              <PromptWorkspace
+                content={content}
+                description={description}
+                tags={tags}
+                onChangeContent={setContent}
+                onChangeDescription={setDescription}
+                onChangeTags={setTags}
+                onCopyEditor={() => undefined}
+                onDownloadEditor={() => undefined}
+              />
+            </div>
+          </div>
+        ) : (
+          <PromptWorkspace
+            content={content}
+            description={description}
+            tags={tags}
+            onChangeContent={setContent}
+            onChangeDescription={setDescription}
+            onChangeTags={setTags}
+            onCopyEditor={() => undefined}
+            onDownloadEditor={() => undefined}
+          />
         )}
-        <PromptWorkspace
-          content={content}
-          description={description}
-          tags={tags}
-          onChangeContent={setContent}
-          onChangeDescription={setDescription}
-          onChangeTags={setTags}
-          onCopyEditor={() => undefined}
-          onDownloadEditor={() => undefined}
-        />
       </section>
     </main>
   );

@@ -1,6 +1,7 @@
 import { ArrowLeft, Copy, Save, Star, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../../shared/components/Button";
+import { FileUploadBox } from "../../shared/components/FileUploadBox";
 import { IconButton } from "../../shared/components/IconButton";
 import { ImageAssetPreview } from "../../shared/components/ImageAssetPreview";
 import { FIELD_LIMITS } from "../../shared/constants";
@@ -179,30 +180,50 @@ export function PromptDetailPage({
             <Button className="detail-copy-button" variant="primary" onClick={onCopyLatest}><Copy className="icon" />复制最新版本</Button>
           </div>
         </div>
-        {isImagePrompt && (
-          <section className="image-detail-preview">
-            <ImageAssetPreview
-              assetId={item.latestVersion.imageAssetId}
-              alt={`${item.prompt.title} 最新图片`}
-              className="image-detail-preview-img"
-            />
-          </section>
+        {isImagePrompt ? (
+          <div className="image-detail-shell">
+            <section className="image-detail-side">
+              <ImageAssetPreview
+                assetId={item.latestVersion.imageAssetId}
+                alt={`${item.prompt.title} 最新图片`}
+                className="image-detail-preview-img"
+              />
+            </section>
+            <div className="image-detail-editor">
+              <PromptWorkspace
+                content={content}
+                description={description}
+                tags={tags}
+                versions={versions}
+                latestVersionId={item.prompt.latestVersionId}
+                onChangeContent={setContent}
+                onChangeDescription={setDescription}
+                onBlurDescription={handleDescriptionBlur}
+                onChangeTags={handleTagsChange}
+                onCopyEditor={onCopyEditor}
+                onDownloadEditor={onDownloadEditor}
+                onCompareToLatest={onCompareToLatest}
+                onCopyVersion={onCopyVersion}
+              />
+            </div>
+          </div>
+        ) : (
+          <PromptWorkspace
+            content={content}
+            description={description}
+            tags={tags}
+            versions={versions}
+            latestVersionId={item.prompt.latestVersionId}
+            onChangeContent={setContent}
+            onChangeDescription={setDescription}
+            onBlurDescription={handleDescriptionBlur}
+            onChangeTags={handleTagsChange}
+            onCopyEditor={onCopyEditor}
+            onDownloadEditor={onDownloadEditor}
+            onCompareToLatest={onCompareToLatest}
+            onCopyVersion={onCopyVersion}
+          />
         )}
-        <PromptWorkspace
-          content={content}
-          description={description}
-          tags={tags}
-          versions={versions}
-          latestVersionId={item.prompt.latestVersionId}
-          onChangeContent={setContent}
-          onChangeDescription={setDescription}
-          onBlurDescription={handleDescriptionBlur}
-          onChangeTags={handleTagsChange}
-          onCopyEditor={onCopyEditor}
-          onDownloadEditor={onDownloadEditor}
-          onCompareToLatest={onCompareToLatest}
-          onCopyVersion={onCopyVersion}
-        />
       </section>
       {isSaveDialogOpen && (
         <div className="modal-backdrop">
@@ -214,15 +235,15 @@ export function PromptDetailPage({
             <div className="save-version-body">
               <p>请确认亮点和标签已更新</p>
               {isImagePrompt && (
-                <label className="field">
-                  <span>版本图片</span>
-                  <input
-                    aria-label="替换版本图片"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={(event) => setReplacementImageFile(event.target.files?.[0])}
-                  />
-                </label>
+                <FileUploadBox
+                  label="版本图片"
+                  actionLabel="替换图片"
+                  ariaLabel="替换版本图片"
+                  accept="image/png,image/jpeg,image/webp"
+                  file={replacementImageFile}
+                  preview
+                  onChange={setReplacementImageFile}
+                />
               )}
               <label className="field">
                 <span>版本号</span>

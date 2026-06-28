@@ -29,12 +29,14 @@ describe("ImportPage", () => {
       />
     );
 
+    expect(screen.getByText("选择 ZIP 文件").closest(".file-upload-box")).toBeTruthy();
     await user.upload(
       screen.getByLabelText("选择备份文件"),
       new File(["zip-bytes"], "backup.zip", { type: "application/zip" })
     );
 
     await waitFor(() => expect(onPreviewFile).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("backup.zip")).toBeInTheDocument();
     expect(await screen.findByText("5")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "执行导入" }));

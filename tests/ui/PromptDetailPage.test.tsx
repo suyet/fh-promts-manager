@@ -45,7 +45,7 @@ describe("PromptDetailPage", () => {
     expect(screen.getByRole("button", { name: "复制最新版本" }).previousElementSibling).toHaveClass("detail-action-divider");
     expect(screen.getByText("场景：代码重构")).toHaveClass("detail-sub-meta-item");
     expect(screen.getByText("更新于 2026/6/26")).toHaveClass("detail-sub-meta-item");
-    expect(screen.getByText("v1")).toHaveClass("version-pill");
+    expect(screen.getAllByText("v1").find((element) => element.classList.contains("version-pill"))).toBeTruthy();
     expect(await screen.findByText("提示词编辑器")).toBeInTheDocument();
     expect(await screen.findByText("7 字符")).toBeInTheDocument();
     expect(screen.getByLabelText("提示词正文").closest(".editor")).toHaveClass("editor-light");
@@ -172,7 +172,9 @@ describe("PromptDetailPage", () => {
   it("shows the latest image and allows replacing it when saving an image prompt version", async () => {
     const user = userEvent.setup();
     const onSaveVersion = vi.fn();
-    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:detail-cover");
+    vi.spyOn(URL, "createObjectURL")
+      .mockReturnValueOnce("blob:detail-cover")
+      .mockReturnValueOnce("blob:replacement-cover");
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     await repositories.imageAssets.put(imageAssetFactory());
     const latestVersion = versionFactory({ imageAssetId: "asset-cover" });
@@ -199,14 +201,18 @@ describe("PromptDetailPage", () => {
     );
 
     expect(await screen.findByAltText("Code Refactor Helper 最新图片")).toHaveAttribute("src", "blob:detail-cover");
+    expect(screen.getByAltText("Code Refactor Helper 最新图片").closest(".image-detail-side")).toBeTruthy();
+    expect(screen.getByLabelText("提示词正文").closest(".image-detail-editor")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "保存新版本" }));
     expect(screen.getByText("版本图片")).toBeInTheDocument();
+    expect(screen.getByText("替换图片").closest(".file-upload-box")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "确认保存" }));
     expect(onSaveVersion).toHaveBeenLastCalledWith(expect.not.objectContaining({ imageFile: expect.any(File) }));
 
     await user.click(screen.getByRole("button", { name: "保存新版本" }));
     const replacement = new File(["new-image"], "new-cover.png", { type: "image/png" });
     await user.upload(screen.getByLabelText("替换版本图片"), replacement);
+    expect(await screen.findByAltText("new-cover.png 预览")).toHaveAttribute("src", "blob:replacement-cover");
     await user.click(screen.getByRole("button", { name: "确认保存" }));
     expect(onSaveVersion).toHaveBeenLastCalledWith(expect.objectContaining({ imageFile: replacement }));
   });
@@ -264,7 +270,7 @@ describe("PromptDetailPage", () => {
     expect(await screen.findByLabelText("提示词正文")).toHaveTextContent("第二版正文");
     expect(screen.getByLabelText("亮点")).toHaveValue("第二版亮点");
     expect(screen.getByLabelText("移除标签 new")).toBeInTheDocument();
-    expect(screen.getByText("v2")).toHaveClass("version-pill");
+    expect(screen.getAllByText("v2").find((element) => element.classList.contains("version-pill"))).toBeTruthy();
   });
 
   it("sorts version cards by newest date and keeps compare action icon-only with Chinese tooltip", async () => {
@@ -318,7 +324,8 @@ describe("PromptDetailPage", () => {
     );
 
     const rows = screen.getAllByTestId("version-card");
-    expect(rows.map((row) => row.querySelector("strong")?.textContent)).toEqual(["V5 当前", "v2", "v1"]);
+    expect(rows.map((row) => row.querySelector("strong")?.textContent)).toEqual(["V5", "v2", "v1"]);
+    expect(rows[0].querySelector(".version-latest-badge")).toHaveTextContent("最新");
     expect(rows[0]).toHaveTextContent("2026/1/23");
     expect(rows[0]).toHaveTextContent("最新版本亮点内容");
     expect(rows[0]).toHaveTextContent("文本");
@@ -373,6 +380,8 @@ describe("PromptDetailPage", () => {
 
     expect(screen.getByRole("dialog", { name: "v1 版本预览" })).toBeInTheDocument();
     expect(await screen.findByAltText("v1 图片")).toHaveAttribute("src", "blob:history-cover");
+    expect(screen.getByAltText("v1 图片").closest(".version-preview-media")).toBeTruthy();
+    expect(screen.getByText("历史版本正文").closest(".version-preview-copy")).toBeTruthy();
     expect(screen.getByText("历史版本正文")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "恢复版本" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "复制提示词" }));

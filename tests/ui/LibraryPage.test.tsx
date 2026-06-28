@@ -134,6 +134,8 @@ describe("LibraryPage", () => {
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     await repositories.imageAssets.put(imageAssetFactory());
     const imageScene = sceneFactory({ promptType: "image", icon: "image", name: "生图场景" });
+    const onCopyPrompt = vi.fn();
+    const onTogglePromptFavorite = vi.fn();
 
     render(
       <LibraryPage
@@ -151,8 +153,8 @@ describe("LibraryPage", () => {
         }]}
         onSelectScene={vi.fn()}
         onOpenPrompt={vi.fn()}
-        onCopyPrompt={vi.fn()}
-        onTogglePromptFavorite={vi.fn()}
+        onCopyPrompt={onCopyPrompt}
+        onTogglePromptFavorite={onTogglePromptFavorite}
         onCreatePrompt={vi.fn()}
         onCreateScene={vi.fn()}
         onEditScene={vi.fn()}
@@ -169,7 +171,10 @@ describe("LibraryPage", () => {
     expect(within(card).getByText("v1")).toBeInTheDocument();
     expect(within(card).queryByText("图片提示词正文")).not.toBeInTheDocument();
     expect(within(card).queryByText("image-tag")).not.toBeInTheDocument();
-    expect(within(card).queryByLabelText("复制最新版本")).not.toBeInTheDocument();
+    await userEvent.setup().click(within(card).getByLabelText("复制最新版本"));
+    expect(onCopyPrompt).toHaveBeenCalledTimes(1);
+    await userEvent.setup().click(within(card).getByLabelText("取消收藏"));
+    expect(onTogglePromptFavorite).toHaveBeenCalledTimes(1);
   });
 
 

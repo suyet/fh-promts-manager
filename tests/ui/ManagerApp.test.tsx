@@ -63,6 +63,8 @@ describe("ManagerApp", () => {
 
   it("creates an image prompt with a required cover image", async () => {
     const user = userEvent.setup();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:new-cover");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     await repositories.scenes.put(sceneFactory({ promptType: "image", icon: "image", name: "生图场景" }));
 
     render(<ManagerApp />);
@@ -70,6 +72,7 @@ describe("ManagerApp", () => {
     await screen.findByRole("heading", { name: "生图场景" });
     await user.click(screen.getByRole("button", { name: "新建" }));
     expect(await screen.findByText("上传封面图片")).toBeInTheDocument();
+    expect(screen.getByText("选择图片").closest(".file-upload-box")).toBeTruthy();
     expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
 
     await user.type(screen.getByLabelText("Prompt 标题"), "图片 Prompt");
@@ -81,6 +84,7 @@ describe("ManagerApp", () => {
       screen.getByLabelText("上传封面图片"),
       new File(["image-bytes"], "cover.png", { type: "image/png" })
     );
+    expect(await screen.findByAltText("cover.png 预览")).toHaveAttribute("src", "blob:new-cover");
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(async () => {

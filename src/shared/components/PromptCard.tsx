@@ -50,6 +50,23 @@ export function PromptCard({
         onDrop={onDrop}
       >
         {isSorting && <span className="prompt-sort-grip image-card-grip"><GripVertical className="icon" /></span>}
+        {!isSorting && (
+          <div className="image-card-actions">
+            <IconButton
+              className={item.prompt.favorite ? "favorite-active" : undefined}
+              label={favoriteLabel}
+              icon={<Star className="icon" fill={item.prompt.favorite ? "currentColor" : "none"} />}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleFavorite();
+              }}
+            />
+            <IconButton label="复制最新版本" icon={<Copy className="icon" />} onClick={(event) => {
+              event.stopPropagation();
+              onCopy();
+            }} />
+          </div>
+        )}
         <ImageAssetPreview
           assetId={item.latestVersion.imageAssetId}
           alt={`${item.prompt.title} 封面`}

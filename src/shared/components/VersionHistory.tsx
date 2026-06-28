@@ -44,7 +44,8 @@ export function VersionHistory({
               >
                 <div className="version-info">
                   <div className="version-head-line">
-                    <strong>{label}{isLatest ? " 当前" : ""}</strong>
+                    <strong>{label}</strong>
+                    {isLatest && <span className="version-latest-badge">最新</span>}
                     {!isLatest && (
                       <IconButton
                         className="bare-icon-btn"
@@ -82,10 +83,14 @@ export function VersionHistory({
               <IconButton className="bare-icon-btn" label="关闭" icon={<X className="icon" />} onClick={() => setPreviewVersion(null)} />
             </div>
             <div className="version-preview-body">
-              {previewVersion.imageAssetId && (
-                <ImageAssetPreview assetId={previewVersion.imageAssetId} alt={`${previewLabel} 图片`} className="version-preview-image" />
-              )}
-              <pre className="version-preview-text">{previewVersion.content}</pre>
+              <div className="version-preview-media">
+                {previewVersion.imageAssetId && (
+                  <ImageAssetPreview assetId={previewVersion.imageAssetId} alt={`${previewLabel} 图片`} className="version-preview-image" />
+                )}
+              </div>
+              <div className="version-preview-copy">
+                <pre className="version-preview-text">{previewVersion.content}</pre>
+              </div>
             </div>
             <div className="modal-actions">
               <Button

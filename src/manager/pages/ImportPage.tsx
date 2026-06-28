@@ -1,6 +1,7 @@
 import { Check, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../../shared/components/Button";
+import { FileUploadBox } from "../../shared/components/FileUploadBox";
 import type { ImportPreview } from "../../shared/types";
 
 export function ImportPage({
@@ -17,6 +18,7 @@ export function ImportPage({
   onConfirm: () => void;
 }) {
   const [currentPreview, setCurrentPreview] = useState(preview);
+  const [selectedFile, setSelectedFile] = useState<File | undefined>(undefined);
 
   useEffect(() => {
     setCurrentPreview(preview);
@@ -24,6 +26,7 @@ export function ImportPage({
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
+    setSelectedFile(file);
     try {
       setCurrentPreview(await onPreviewFile(file));
     } catch {
@@ -36,17 +39,16 @@ export function ImportPage({
       <section className="import-card">
         <h1>导入预览</h1>
         <p>合并导入，不静默覆盖或删除本地数据。</p>
-        <label className="field import-file">
-          <span>选择备份文件</span>
-          <input
-            aria-label="选择备份文件"
-            type="file"
-            accept="application/zip,.zip"
-            onChange={(event) => {
-              void handleFile(event.target.files?.[0]);
-            }}
-          />
-        </label>
+        <FileUploadBox
+          label="选择备份文件"
+          actionLabel="选择 ZIP 文件"
+          ariaLabel="选择备份文件"
+          accept="application/zip,.zip"
+          file={selectedFile}
+          onChange={(file) => {
+            void handleFile(file);
+          }}
+        />
         {error ? <p className="error-text">{error}</p> : null}
         <div className="import-grid">
           <div><strong>{currentPreview?.scenes ?? 0}</strong><span>Scene</span></div>
