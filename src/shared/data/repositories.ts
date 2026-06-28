@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { normalizePromptVersion } from "../tagUtils";
-import type { Prompt, PromptVersion, Scene, UsageRecord } from "../types";
+import type { ImageAsset, Prompt, PromptVersion, Scene, UsageRecord } from "../types";
 
 export const repositories = {
   scenes: {
@@ -17,12 +17,28 @@ export const repositories = {
     put: (prompt: Prompt) => db.prompts.put(prompt),
     bulkPut: (prompts: Prompt[]) => db.prompts.bulkPut(prompts),
     async deleteWithVersions(promptId: string) {
-      await db.transaction("rw", db.prompts, db.versions, db.usageRecords, async () => {
+      await db.transaction("rw", db.prompts, db.versions, db.imageAssets, db.usageRecords, async () => {
+        const versions = await db.versions.where("promptId").equals(promptId).toArray();
+        const candidateAssetIds = Array.from(new Set(
+          versions.flatMap((version) => version.imageAssetId ? [version.imageAssetId] : [])
+        ));
         await db.prompts.delete(promptId);
         await db.versions.where("promptId").equals(promptId).delete();
         await db.usageRecords.where("promptId").equals(promptId).delete();
+        for (const assetId of candidateAssetIds) {
+          const stillUsed = await db.versions.where("imageAssetId").equals(assetId).count();
+          if (!stillUsed) await db.imageAssets.delete(assetId);
+        }
       });
     }
+  },
+  imageAssets: {
+    list: () => db.imageAssets.toArray(),
+    get: (id: string) => db.imageAssets.get(id),
+    put: (asset: ImageAsset) => db.imageAssets.put(asset),
+    bulkPut: (assets: ImageAsset[]) => db.imageAssets.bulkPut(assets),
+    bulkDelete: (ids: string[]) => db.imageAssets.bulkDelete(ids),
+    clear: () => db.imageAssets.clear()
   },
   versions: {
     async get(id: string) {

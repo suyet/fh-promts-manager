@@ -49,9 +49,9 @@ export function ImportPage({
         </label>
         {error ? <p className="error-text">{error}</p> : null}
         <div className="import-grid">
-          <div><strong>{currentPreview?.scenesToAdd ?? 0}</strong><span>新增 Scene</span></div>
-          <div><strong>{currentPreview?.promptsToAdd ?? 0}</strong><span>新增 Prompt</span></div>
-          <div><strong>{currentPreview?.versionsToAdd ?? 0}</strong><span>新增版本</span></div>
+          <div><strong>{currentPreview?.scenes ?? 0}</strong><span>Scene</span></div>
+          <div><strong>{currentPreview?.prompts ?? 0}</strong><span>Prompt</span></div>
+          <div><strong>{currentPreview?.versions ?? 0}</strong><span>版本</span></div>
         </div>
         <div className="page-actions">
           <Button onClick={onCancel}><X className="icon" />取消</Button>

@@ -2,8 +2,14 @@ import type { PromptTagColor, SceneColor, SceneIcon } from "./types";
 
 export const APP_NAME = "FH Prompt Manager";
 export const DB_NAME = "fh-prompt-manager";
-export const DB_VERSION = 2;
-export const EXPORT_SCHEMA_VERSION = 1;
+export const DB_VERSION = 3;
+export const EXPORT_SCHEMA_VERSION = 2;
+
+export const IMAGE_LIMITS = {
+  maxImageBytes: 10 * 1024 * 1024,
+  maxZipBytes: 200 * 1024 * 1024,
+  allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"] as const
+};
 
 export const FIELD_LIMITS = {
   sceneName: 10,

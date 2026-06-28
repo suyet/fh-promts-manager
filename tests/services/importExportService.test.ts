@@ -11,14 +11,14 @@ describe("importExportService", () => {
     await resetDatabase();
   });
 
-  it("exports all tables as schema version 1", async () => {
+  it("exports all tables as schema version 2", async () => {
     await repositories.scenes.put(sceneFactory());
     await repositories.prompts.put(promptFactory());
     await repositories.versions.put(versionFactory());
 
     const payload = await importExportService.exportAll();
 
-    expect(payload.schemaVersion).toBe(1);
+    expect(payload.schemaVersion).toBe(2);
     expect(payload.scenes).toHaveLength(1);
     expect(payload.prompts).toHaveLength(1);
     expect(payload.versions).toHaveLength(1);
@@ -30,7 +30,7 @@ describe("importExportService", () => {
     await repositories.versions.put(versionFactory());
 
     const payload: ExportPayload = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: "2026-06-26T08:00:00.000Z",
       scenes: [sceneFactory({ icon: "pen", color: "teal" })],
       prompts: [promptFactory()],
@@ -40,16 +40,16 @@ describe("importExportService", () => {
 
     const preview = await importExportService.previewImport(payload);
 
-    expect(preview.scenesToMerge).toBe(1);
-    expect(preview.promptsToMerge).toBe(1);
-    expect(preview.versionsToAdd).toBe(1);
+    expect(preview.scenes).toBe(1);
+    expect(preview.prompts).toBe(1);
+    expect(preview.versions).toBe(1);
   });
 
   it("imports without overwriting local scene icon and color", async () => {
     await repositories.scenes.put(sceneFactory({ icon: "code", color: "blue" }));
 
     await importExportService.importAll({
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: "2026-06-26T08:00:00.000Z",
       scenes: [sceneFactory({ icon: "pen", color: "teal" })],
       prompts: [],
@@ -66,7 +66,7 @@ describe("importExportService", () => {
     await repositories.scenes.put(sceneFactory());
 
     await importExportService.importAll({
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: "2026-06-26T08:00:00.000Z",
       scenes: [sceneFactory()],
       prompts: [promptFactory({
@@ -120,7 +120,7 @@ describe("importExportService", () => {
     }));
 
     await importExportService.importAll({
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: "2026-06-26T08:00:00.000Z",
       scenes: [sceneFactory()],
       prompts: [promptFactory({
@@ -156,7 +156,7 @@ describe("importExportService", () => {
     }));
 
     const preview = await importExportService.previewImport({
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: "2026-06-26T08:00:00.000Z",
       scenes: [sceneFactory()],
       prompts: [promptFactory({
@@ -171,7 +171,7 @@ describe("importExportService", () => {
       usageRecords: []
     });
 
-    expect(preview.promptsToMerge).toBe(1);
-    expect(preview.versionsToAdd).toBe(0);
+    expect(preview.prompts).toBe(1);
+    expect(preview.versions).toBe(0);
   });
 });

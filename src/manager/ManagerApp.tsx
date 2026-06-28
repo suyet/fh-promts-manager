@@ -167,6 +167,7 @@ export function ManagerApp() {
       description: input.description,
       icon: input.icon,
       color: input.color,
+      promptType: "text",
       sortOrder: scenes.reduce((maximum, item) => Math.max(maximum, item.sortOrder), 0) + 1,
       createdAt: timestamp,
       updatedAt: timestamp
@@ -294,7 +295,7 @@ export function ManagerApp() {
   function isExportPayload(value: unknown): value is ExportPayload {
     if (!value || typeof value !== "object") return false;
     const candidate = value as Partial<ExportPayload>;
-    return candidate.schemaVersion === 1
+    return candidate.schemaVersion === 2
       && Array.isArray(candidate.scenes)
       && Array.isArray(candidate.prompts)
       && Array.isArray(candidate.versions)

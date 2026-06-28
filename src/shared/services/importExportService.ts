@@ -86,7 +86,6 @@ export const importExportService = {
     const localScenes = await repositories.scenes.list();
     const localPrompts = await repositories.prompts.list();
     const { importedSceneNameById, localSceneByName, promptIdMap } = buildImportMappings(payload, localScenes, localPrompts);
-    const localSceneNames = new Set(localScenes.map((scene) => scene.name));
     const importedSceneNames = new Set(payload.scenes.map((scene) => scene.name));
     const localSceneNameById = new Map(localScenes.map((scene) => [scene.id, scene.name]));
     const localPromptKeys = new Set(localPrompts.map((prompt) => samePromptKey(prompt, localSceneNameById)));
@@ -105,11 +104,11 @@ export const importExportService = {
     }
 
     return {
-      scenesToAdd: payload.scenes.filter((scene) => !localSceneByName.has(scene.name)).length,
-      scenesToMerge: payload.scenes.filter((scene) => localSceneNames.has(scene.name)).length,
-      promptsToAdd: importedPromptKeys.filter((key) => !localPromptKeys.has(key)).length,
-      promptsToMerge: importedPromptKeys.filter((key) => localPromptKeys.has(key)).length,
-      versionsToAdd,
+      scenes: payload.scenes.length,
+      prompts: importedPromptKeys.length,
+      versions: versionsToAdd,
+      usageRecords: payload.usageRecords.length,
+      imageAssets: 0,
       warnings: [...importedSceneNames].length !== payload.scenes.length ? ["导入文件中存在同名 Scene。"] : []
     };
   },

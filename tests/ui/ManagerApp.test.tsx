@@ -192,7 +192,7 @@ describe("ManagerApp", () => {
   it("previews and imports a json backup", async () => {
     const user = userEvent.setup();
     const payload: ExportPayload = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: "2026-06-26T08:00:00.000Z",
       scenes: [sceneFactory({ id: "scene-writing", name: "写作", icon: "pen", color: "pink" })],
       prompts: [],

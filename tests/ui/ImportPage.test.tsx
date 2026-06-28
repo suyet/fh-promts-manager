@@ -5,11 +5,11 @@ import { ImportPage } from "../../src/manager/pages/ImportPage";
 import type { ExportPayload, ImportPreview } from "../../src/shared/types";
 
 const preview: ImportPreview = {
-  scenesToAdd: 1,
-  scenesToMerge: 2,
-  promptsToAdd: 3,
-  promptsToMerge: 4,
-  versionsToAdd: 5,
+  scenes: 1,
+  prompts: 3,
+  versions: 5,
+  usageRecords: 0,
+  imageAssets: 0,
   warnings: []
 };
 
@@ -19,7 +19,7 @@ describe("ImportPage", () => {
     const onPreviewFile = vi.fn(async () => preview);
     const onConfirm = vi.fn();
     const payload: ExportPayload = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: "2026-06-26T08:00:00.000Z",
       scenes: [],
       prompts: [],

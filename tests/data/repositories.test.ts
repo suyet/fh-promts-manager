@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { resetDatabase } from "../../src/shared/data/db";
 import { repositories } from "../../src/shared/data/repositories";
 import { normalizePromptVersion } from "../../src/shared/tagUtils";
-import { promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
+import { imageAssetFactory, promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
 
 describe("repositories", () => {
   beforeEach(async () => {
@@ -32,5 +32,21 @@ describe("repositories", () => {
 
     await expect(repositories.prompts.get("prompt-refactor")).resolves.toBeUndefined();
     await expect(repositories.versions.listByPrompt("prompt-refactor")).resolves.toEqual([]);
+  });
+
+  it("stores scene prompt type and image assets", async () => {
+    const scene = sceneFactory({ promptType: "image" });
+    const asset = imageAssetFactory({ id: "asset-1", mimeType: "image/png" });
+
+    await repositories.scenes.put(scene);
+    await repositories.imageAssets.put(asset);
+
+    await expect(repositories.scenes.get(scene.id)).resolves.toMatchObject({ promptType: "image" });
+    await expect(repositories.imageAssets.get("asset-1")).resolves.toMatchObject({
+      id: "asset-1",
+      mimeType: "image/png",
+      size: asset.size,
+      sha256: asset.sha256
+    });
   });
 });

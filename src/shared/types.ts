@@ -1,5 +1,7 @@
 export type Id = string;
 export type IsoDateString = string;
+export type PromptType = "text" | "image";
+export type ImageMimeType = "image/png" | "image/jpeg" | "image/webp";
 
 export type SceneColor =
   | "gray"
@@ -41,6 +43,7 @@ export interface Scene {
   description: string;
   icon: SceneIcon;
   color: SceneColor;
+  promptType: PromptType;
   sortOrder: number;
   createdAt: IsoDateString;
   updatedAt: IsoDateString;
@@ -86,6 +89,16 @@ export interface PromptVersion {
   description: string;
   tags: StoredPromptTag[];
   note: string;
+  imageAssetId?: Id;
+  createdAt: IsoDateString;
+}
+
+export interface ImageAsset {
+  id: Id;
+  mimeType: ImageMimeType;
+  size: number;
+  sha256: string;
+  blob: Blob;
   createdAt: IsoDateString;
 }
 
@@ -112,7 +125,7 @@ export interface PromptSearchQuery {
 }
 
 export interface ExportPayload {
-  schemaVersion: 1;
+  schemaVersion: 2;
   exportedAt: IsoDateString;
   scenes: Scene[];
   prompts: Prompt[];
@@ -120,11 +133,33 @@ export interface ExportPayload {
   usageRecords: UsageRecord[];
 }
 
+export interface ZipBackupAssetManifest {
+  id: Id;
+  path: string;
+  mimeType: ImageMimeType;
+  size: number;
+  sha256: string;
+}
+
+export interface ZipBackupManifest {
+  app: "fh-prompt-manager";
+  schemaVersion: 2;
+  exportedAt: IsoDateString;
+  counts: {
+    scenes: number;
+    prompts: number;
+    versions: number;
+    usageRecords: number;
+    imageAssets: number;
+  };
+  assets: ZipBackupAssetManifest[];
+}
+
 export interface ImportPreview {
-  scenesToAdd: number;
-  scenesToMerge: number;
-  promptsToAdd: number;
-  promptsToMerge: number;
-  versionsToAdd: number;
+  scenes: number;
+  prompts: number;
+  versions: number;
+  usageRecords: number;
+  imageAssets: number;
   warnings: string[];
 }

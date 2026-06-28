@@ -11,6 +11,7 @@ export async function seedIfEmpty() {
     description: "工程质量与 review",
     icon: "code" as const,
     color: "blue" as const,
+    promptType: "text" as const,
     sortOrder: 1,
     createdAt: timestamp,
     updatedAt: timestamp
