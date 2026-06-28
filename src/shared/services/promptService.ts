@@ -23,8 +23,15 @@ export const promptService = {
     tags: StoredPromptTag[];
     favorite: boolean;
     content: string;
+    imageAssetId?: string;
     note: string;
   }): Promise<Prompt> {
+    const scene = await repositories.scenes.get(input.sceneId);
+    if (!scene) throw new Error("Scene not found.");
+    const imageAssetId = scene.promptType === "image" ? input.imageAssetId : undefined;
+    if (scene.promptType === "image" && !imageAssetId) {
+      throw new Error("生图场景必须提供图片。");
+    }
     const timestamp = now();
     const promptId = id();
     const versionId = id();
@@ -49,6 +56,7 @@ export const promptService = {
       description: input.description,
       tags: normalizePromptTags(input.tags),
       note: input.note,
+      imageAssetId,
       createdAt: timestamp
     };
     await db.transaction("rw", db.prompts, db.versions, async () => {
@@ -60,10 +68,19 @@ export const promptService = {
 
   async saveNewVersion(
     promptId: string,
-    input: { content: string; description: string; tags: StoredPromptTag[]; note: string; customVersionLabel?: string }
+    input: { content: string; description: string; tags: StoredPromptTag[]; note: string; customVersionLabel?: string; imageAssetId?: string }
   ): Promise<Prompt> {
     const prompt = await repositories.prompts.get(promptId);
     if (!prompt) throw new Error("Prompt not found.");
+    const [scene, latestVersion] = await Promise.all([
+      repositories.scenes.get(prompt.sceneId),
+      repositories.versions.get(prompt.latestVersionId)
+    ]);
+    if (!scene) throw new Error("Scene not found.");
+    const imageAssetId = scene.promptType === "image" ? (input.imageAssetId ?? latestVersion?.imageAssetId) : undefined;
+    if (scene.promptType === "image" && !imageAssetId) {
+      throw new Error("生图场景必须提供图片。");
+    }
     const timestamp = now();
     const version: PromptVersion = {
       id: id(),
@@ -74,6 +91,7 @@ export const promptService = {
       description: input.description,
       tags: normalizePromptTags(input.tags),
       note: input.note,
+      imageAssetId,
       createdAt: timestamp
     };
     const updated: Prompt = {

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetDatabase } from "../../src/shared/data/db";
 import { repositories } from "../../src/shared/data/repositories";
 import { promptService } from "../../src/shared/services/promptService";
-import { promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
+import { imageAssetFactory, promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
 
 describe("promptService", () => {
   beforeEach(async () => {
@@ -31,6 +31,52 @@ describe("promptService", () => {
     expect(versions[0].tags).toEqual([
       expect.objectContaining({ label: "tag-a", color: expect.any(String) })
     ]);
+  });
+
+  it("requires and stores an image asset for image scene prompts", async () => {
+    await repositories.scenes.put(sceneFactory({ promptType: "image" }));
+    await repositories.imageAssets.put(imageAssetFactory());
+
+    await expect(promptService.createPrompt({
+      sceneId: "scene-code",
+      title: "Image Prompt",
+      description: "desc",
+      tags: ["tag-a"],
+      favorite: false,
+      content: "content v1",
+      note: "初始版本"
+    })).rejects.toThrow("生图场景必须提供图片。");
+
+    const created = await promptService.createPrompt({
+      sceneId: "scene-code",
+      title: "Image Prompt",
+      description: "desc",
+      tags: ["tag-a"],
+      favorite: false,
+      content: "content v1",
+      imageAssetId: "asset-cover",
+      note: "初始版本"
+    });
+
+    const versions = await repositories.versions.listByPrompt(created.id);
+    expect(versions[0].imageAssetId).toBe("asset-cover");
+  });
+
+  it("reuses the latest image asset when saving a new image prompt version without replacing the image", async () => {
+    await repositories.scenes.put(sceneFactory({ promptType: "image" }));
+    await repositories.imageAssets.put(imageAssetFactory());
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory({ imageAssetId: "asset-cover" }));
+
+    await promptService.saveNewVersion("prompt-refactor", {
+      content: "content v2",
+      note: "增强约束",
+      description: "v2 亮点",
+      tags: ["v2"]
+    });
+
+    const versions = await repositories.versions.listByPrompt("prompt-refactor");
+    expect(versions[1].imageAssetId).toBe("asset-cover");
   });
 
   it("saving content creates a new immutable version", async () => {
