@@ -1792,7 +1792,9 @@ button { border: 0; cursor: pointer; }
 }
 
 .popup {
+  display: flex;
   width: 460px;
+  height: 620px;
   min-height: 620px;
   max-height: 620px;
   overflow: hidden;
@@ -1803,7 +1805,7 @@ button { border: 0; cursor: pointer; }
 .popup-shell {
   display: flex;
   flex-direction: column;
-  max-height: 588px;
+  height: 100%;
   min-height: 0;
   width: 100%;
 }
@@ -1906,6 +1908,7 @@ button { border: 0; cursor: pointer; }
 
 .popup-section {
   min-height: 0;
+  margin-bottom: 12px;
 }
 
 .popup-match-section {
@@ -1913,6 +1916,7 @@ button { border: 0; cursor: pointer; }
   min-height: 0;
   flex: 1;
   flex-direction: column;
+  margin-bottom: 0;
 }
 
 .popup-list {
@@ -1963,6 +1967,12 @@ button { border: 0; cursor: pointer; }
 
 .popup-result p {
   margin: 5px 0 0;
+}
+
+.required-marker {
+  margin-left: 4px;
+  color: #dc2626;
+  font-weight: 900;
 }
 
 .popup-empty {

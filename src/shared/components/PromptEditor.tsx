@@ -26,6 +26,7 @@ import { Bold, Braces, Code2, Copy, Download, Heading1, Heading2, Moon, Pilcrow,
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { applyMarkdownEdit, type MarkdownEditAction } from "../editor/markdownEditing";
 import { IconButton } from "./IconButton";
+import { RequiredMarker } from "./RequiredMarker";
 
 const jsonLanguage = LanguageDescription.of({
   name: "JSON",
@@ -105,12 +106,14 @@ export function PromptEditor({
   content,
   onChange,
   onDownload,
-  onCopy
+  onCopy,
+  required = false
 }: {
   content: string;
   onChange: (value: string) => void;
   onDownload: () => void;
   onCopy: () => void;
+  required?: boolean;
 }) {
   const [dark, setDark] = useState(false);
   const editorParentRef = useRef<HTMLDivElement>(null);
@@ -166,7 +169,7 @@ export function PromptEditor({
     <section className={dark ? "editor editor-dark" : "editor editor-light"}>
       <div className="editor-bar">
         <div className="editor-title-row">
-          <strong>提示词编辑器</strong>
+          <strong>提示词编辑器{required && <RequiredMarker />}</strong>
           <span>{content.length} 字符</span>
         </div>
         <div className="editor-actions">

@@ -32,7 +32,7 @@ describe("PopupApp", () => {
     expect(onCopy).toHaveBeenCalledTimes(1);
   });
 
-  it("limits recent prompts to three and scrolls matches in their own list", () => {
+  it("limits recent prompts to two and scrolls matches in their own list", () => {
     render(
       <PopupApp
         scenes={[sceneFactory()]}
@@ -55,7 +55,7 @@ describe("PopupApp", () => {
 
     expect(screen.getByText("Recent 1")).toBeInTheDocument();
     expect(screen.getByText("Recent 2")).toBeInTheDocument();
-    expect(screen.getByText("Recent 3")).toBeInTheDocument();
+    expect(screen.queryByText("Recent 3")).not.toBeInTheDocument();
     expect(screen.queryByText("Recent 4")).not.toBeInTheDocument();
     expect(screen.getByText("Match 1").closest(".popup-list-scroll")).toBeTruthy();
     expect(screen.getByText("匹配结果").closest(".popup-match-section")).toBeTruthy();

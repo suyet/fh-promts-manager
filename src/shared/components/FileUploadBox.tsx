@@ -1,5 +1,6 @@
 import { ImagePlus, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
+import { RequiredMarker } from "./RequiredMarker";
 
 export function FileUploadBox({
   label,
@@ -8,6 +9,7 @@ export function FileUploadBox({
   accept,
   file,
   preview = false,
+  required = false,
   className,
   onChange
 }: {
@@ -17,6 +19,7 @@ export function FileUploadBox({
   accept: string;
   file?: File;
   preview?: boolean;
+  required?: boolean;
   className?: string;
   onChange: (file: File | undefined) => void;
 }) {
@@ -39,7 +42,7 @@ export function FileUploadBox({
 
   return (
     <label className={rootClassName}>
-      <span className="file-upload-label">{label}</span>
+      <span className="file-upload-label">{label}{required && <RequiredMarker />}</span>
       <span className="file-upload-surface">
         {previewUrl ? (
           <img className="file-upload-preview" src={previewUrl} alt={`${file?.name ?? "图片"} 预览`} />

@@ -22,7 +22,8 @@ export function PromptWorkspace({
   onCopyEditor,
   onDownloadEditor,
   onCompareToLatest,
-  onCopyVersion
+  onCopyVersion,
+  requiredContent = false
 }: {
   content: string;
   description: string;
@@ -37,6 +38,7 @@ export function PromptWorkspace({
   onDownloadEditor: (content: string) => void;
   onCompareToLatest?: (versionId: string) => void;
   onCopyVersion?: (versionId: string) => void;
+  requiredContent?: boolean;
 }) {
   return (
     <div className="detail-grid">
@@ -46,6 +48,7 @@ export function PromptWorkspace({
           onChange={onChangeContent}
           onDownload={() => onDownloadEditor(content)}
           onCopy={() => onCopyEditor(content)}
+          required={requiredContent}
         />
       </Suspense>
       <aside className="right-panel">

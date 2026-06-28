@@ -27,7 +27,7 @@ export function PopupApp({
 }) {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
-  const recentItems = recent.slice(0, 3);
+  const recentItems = recent.slice(0, 2);
   const matchItems = [...matches].sort((a, b) => Number(b.prompt.favorite) - Number(a.prompt.favorite));
 
   useEffect(() => {

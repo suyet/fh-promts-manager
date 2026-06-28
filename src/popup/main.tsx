@@ -18,7 +18,7 @@ function PopupBootstrap() {
     const [loadedScenes, loadedMatches, recentItems] = await Promise.all([
       repositories.scenes.list(),
       promptService.searchPrompts({ text: nextSearch, sceneId: nextSceneId || undefined }),
-      promptService.listRecentPrompts(3, nextSceneId || undefined)
+      promptService.listRecentPrompts(2, nextSceneId || undefined)
     ]);
     setScenes(loadedScenes);
     setMatches(loadedMatches);

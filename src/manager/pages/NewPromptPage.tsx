@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "../../shared/components/Button";
 import { FileUploadBox } from "../../shared/components/FileUploadBox";
 import { IconButton } from "../../shared/components/IconButton";
+import { RequiredMarker } from "../../shared/components/RequiredMarker";
 import { FIELD_LIMITS } from "../../shared/constants";
 import { PromptWorkspace } from "../components/PromptWorkspace";
 import type { PromptTag, Scene } from "../../shared/types";
@@ -50,7 +51,7 @@ export function NewPromptPage({
         </div>
         <div className="new-prompt-title-row">
           <label className="field">
-            <span>Prompt 标题</span>
+            <span>Prompt 标题<RequiredMarker /></span>
             <input
               aria-label="Prompt 标题"
               maxLength={FIELD_LIMITS.promptTitle}
@@ -68,6 +69,7 @@ export function NewPromptPage({
               accept="image/png,image/jpeg,image/webp"
               file={imageFile}
               preview
+              required
               className="image-create-upload"
               onChange={setImageFile}
             />
@@ -81,6 +83,7 @@ export function NewPromptPage({
                 onChangeTags={setTags}
                 onCopyEditor={() => undefined}
                 onDownloadEditor={() => undefined}
+                requiredContent
               />
             </div>
           </div>
@@ -94,6 +97,7 @@ export function NewPromptPage({
             onChangeTags={setTags}
             onCopyEditor={() => undefined}
             onDownloadEditor={() => undefined}
+            requiredContent
           />
         )}
       </section>

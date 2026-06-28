@@ -11,8 +11,17 @@ describe("app css layout contracts", () => {
 
   it("keeps the popup compact with an independently scrolling match list", () => {
     expect(css).toMatch(/\.popup\s*{[^}]*width:\s*460px/s);
+    expect(css).toMatch(/\.popup\s*{[^}]*height:\s*620px/s);
+    expect(css).toMatch(/\.popup\s*{[^}]*display:\s*flex/s);
+    expect(css).toMatch(/\.popup-shell\s*{[^}]*height:\s*100%/s);
+    expect(css).toMatch(/\.popup-section\s*{[^}]*margin-bottom:\s*12px/s);
     expect(css).toMatch(/\.popup-match-section\s*{[^}]*min-height:\s*0/s);
+    expect(css).toMatch(/\.popup-match-section\s*{[^}]*margin-bottom:\s*0/s);
     expect(css).toMatch(/\.popup-list-scroll\s*{[^}]*flex:\s*1/s);
     expect(css).toMatch(/\.popup-list-scroll\s*{[^}]*overflow-y:\s*auto/s);
+  });
+
+  it("shows required markers in red", () => {
+    expect(css).toMatch(/\.required-marker\s*{[^}]*color:\s*#dc2626/s);
   });
 });
