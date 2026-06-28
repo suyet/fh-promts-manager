@@ -183,11 +183,13 @@ export function PromptDetailPage({
         {isImagePrompt ? (
           <div className="image-detail-shell">
             <section className="image-detail-side">
-              <ImageAssetPreview
-                assetId={item.latestVersion.imageAssetId}
-                alt={`${item.prompt.title} 最新图片`}
-                className="image-detail-preview-img"
-              />
+              <div className="image-detail-preview-frame">
+                <ImageAssetPreview
+                  assetId={item.latestVersion.imageAssetId}
+                  alt={`${item.prompt.title} 最新图片`}
+                  className="image-detail-preview-img"
+                />
+              </div>
             </section>
             <div className="image-detail-editor">
               <PromptWorkspace

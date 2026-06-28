@@ -200,8 +200,10 @@ describe("PromptDetailPage", () => {
       />
     );
 
-    expect(await screen.findByAltText("Code Refactor Helper 最新图片")).toHaveAttribute("src", "blob:detail-cover");
-    expect(screen.getByAltText("Code Refactor Helper 最新图片").closest(".image-detail-side")).toBeTruthy();
+    const detailImage = await screen.findByAltText("Code Refactor Helper 最新图片");
+    expect(detailImage).toHaveAttribute("src", "blob:detail-cover");
+    expect(detailImage.closest(".image-detail-preview-frame")).toBeTruthy();
+    expect(detailImage.closest(".image-detail-side")).toBeTruthy();
     expect(screen.getByLabelText("提示词正文").closest(".image-detail-editor")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "保存新版本" }));
     expect(screen.getByText("版本图片")).toBeInTheDocument();

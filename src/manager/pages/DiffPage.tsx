@@ -1,5 +1,4 @@
 import { ArrowLeft, Copy } from "lucide-react";
-import { Button } from "../../shared/components/Button";
 import { IconButton } from "../../shared/components/IconButton";
 import { ImageAssetPreview } from "../../shared/components/ImageAssetPreview";
 import type { VersionDiff } from "../../shared/services/diffService";
@@ -23,25 +22,31 @@ export function DiffPage({
             <IconButton label="返回" icon={<ArrowLeft className="icon" />} onClick={onBack} />
             <h1>Comparing {diff.historyLabel} to {diff.latestLabel}</h1>
           </div>
-          <div className="sub-right">
-            <Button onClick={onCopyHistory}><Copy className="icon" />复制 {diff.historyLabel}</Button>
-            <Button variant="primary" onClick={onCopyLatest}><Copy className="icon" />复制 Latest</Button>
-          </div>
         </div>
         <div className="diff-grid">
           <section className="diff-pane">
-            <h2>{diff.historyLabel}</h2>
+            <div className="diff-pane-heading">
+              <h2>{diff.historyLabel}</h2>
+              <IconButton label={`复制 ${diff.historyLabel}`} icon={<Copy className="icon" />} onClick={onCopyHistory} />
+            </div>
             {diff.historyImageAssetId && (
-              <ImageAssetPreview assetId={diff.historyImageAssetId} alt={`${diff.historyLabel} 图片`} className="diff-preview-image" />
+              <div className="diff-preview-media">
+                <ImageAssetPreview assetId={diff.historyImageAssetId} alt={`${diff.historyLabel} 图片`} className="diff-preview-image" />
+              </div>
             )}
             {diff.parts.filter((part) => part.type !== "added").map((part, index) => (
               <pre className={`diff-line ${part.type}`} key={`history-${index}`}>{part.text}</pre>
             ))}
           </section>
           <section className="diff-pane">
-            <h2>{diff.latestLabel}</h2>
+            <div className="diff-pane-heading">
+              <h2>{diff.latestLabel}</h2>
+              <IconButton label={`复制 ${diff.latestLabel}`} icon={<Copy className="icon" />} onClick={onCopyLatest} />
+            </div>
             {diff.latestImageAssetId && (
-              <ImageAssetPreview assetId={diff.latestImageAssetId} alt={`${diff.latestLabel} 图片`} className="diff-preview-image" />
+              <div className="diff-preview-media">
+                <ImageAssetPreview assetId={diff.latestImageAssetId} alt={`${diff.latestLabel} 图片`} className="diff-preview-image" />
+              </div>
             )}
             {diff.parts.filter((part) => part.type !== "removed").map((part, index) => (
               <pre className={`diff-line ${part.type}`} key={`latest-${index}`}>{part.text}</pre>
