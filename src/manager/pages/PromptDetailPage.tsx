@@ -20,6 +20,7 @@ export function PromptDetailPage({
   onDelete,
   onSaveVersion,
   onSaveMetadata,
+  onSaveLatestVersionMetadata,
   onToggleFavorite,
   onCopyEditor,
   onDownloadEditor,
@@ -32,6 +33,7 @@ export function PromptDetailPage({
   onDelete: () => void;
   onSaveVersion: (input: { content: string; description: string; tags: PromptTag[]; customVersionLabel?: string }) => void;
   onSaveMetadata: (input: { title: string; favorite: boolean }) => void;
+  onSaveLatestVersionMetadata: (input: { description: string; tags: PromptTag[] }) => void;
   onToggleFavorite: () => void;
   onCopyEditor: (content: string) => void;
   onDownloadEditor: (content: string) => void;
@@ -78,6 +80,30 @@ export function PromptDetailPage({
 
   function handleTagsChange(nextTags: PromptTag[]) {
     setTags(nextTags);
+    const latestTags = normalizePromptTags(item.latestVersion.tags);
+    const hasChanged = nextTags.length !== latestTags.length
+      || nextTags.some((tag, index) => (
+        tag.label !== latestTags[index]?.label || tag.color !== latestTags[index]?.color
+      ));
+    if (!hasChanged) return;
+    onSaveLatestVersionMetadata({
+      description: description.trim(),
+      tags: nextTags
+    });
+  }
+
+  function handleDescriptionBlur() {
+    if (description.trim() === item.latestVersion.description && tags.length === normalizePromptTags(item.latestVersion.tags).length) {
+      const sameTags = tags.every((tag, index) => {
+        const latestTag = normalizePromptTags(item.latestVersion.tags)[index];
+        return tag.label === latestTag?.label && tag.color === latestTag?.color;
+      });
+      if (sameTags) return;
+    }
+    onSaveLatestVersionMetadata({
+      description: description.trim(),
+      tags
+    });
   }
 
   function confirmSaveVersion() {
@@ -151,6 +177,7 @@ export function PromptDetailPage({
           latestVersionId={item.prompt.latestVersionId}
           onChangeContent={setContent}
           onChangeDescription={setDescription}
+          onBlurDescription={handleDescriptionBlur}
           onChangeTags={handleTagsChange}
           onCopyEditor={onCopyEditor}
           onDownloadEditor={onDownloadEditor}

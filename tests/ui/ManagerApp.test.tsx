@@ -251,6 +251,37 @@ describe("ManagerApp", () => {
     });
   });
 
+  it("auto-saves latest version highlight and tags after leaving and reopening detail", async () => {
+    const user = userEvent.setup();
+    await repositories.scenes.put(sceneFactory());
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory({ description: "旧亮点", tags: ["old"] }));
+
+    render(<ManagerApp />);
+
+    await user.click(await screen.findByText("Code Refactor Helper"));
+    await user.clear(screen.getByLabelText("亮点"));
+    await user.type(screen.getByLabelText("亮点"), "新的自动保存亮点");
+    await user.tab();
+    await user.type(screen.getByLabelText("添加标签"), "beta{Enter}");
+    await user.click(screen.getByLabelText("返回"));
+    await user.click(await screen.findByText("Code Refactor Helper"));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("亮点")).toHaveValue("新的自动保存亮点");
+    });
+    expect(screen.getAllByText("beta")).toHaveLength(2);
+
+    const latestVersion = await repositories.versions.get("version-1");
+    expect(latestVersion).toMatchObject({
+      description: "新的自动保存亮点",
+      tags: [
+        expect.objectContaining({ label: "old", color: expect.any(String) }),
+        expect.objectContaining({ label: "beta", color: expect.any(String) })
+      ]
+    });
+  });
+
   it("disables prompt sorting while a search filter is active", async () => {
     const user = userEvent.setup();
     await repositories.scenes.put(sceneFactory());

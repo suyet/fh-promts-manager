@@ -23,6 +23,7 @@ describe("PromptDetailPage", () => {
         onDelete={vi.fn()}
         onSaveVersion={onSaveVersion}
         onSaveMetadata={vi.fn()}
+        onSaveLatestVersionMetadata={vi.fn()}
         onToggleFavorite={vi.fn()}
         onCopyEditor={vi.fn()}
         onDownloadEditor={vi.fn()}
@@ -75,6 +76,7 @@ describe("PromptDetailPage", () => {
   it("keeps title on prompt but saves highlight and tags with the next version", async () => {
     const user = userEvent.setup();
     const onSaveMetadata = vi.fn();
+    const onSaveLatestVersionMetadata = vi.fn();
     const onSaveVersion = vi.fn();
     const item = {
       prompt: promptFactory(),
@@ -91,6 +93,7 @@ describe("PromptDetailPage", () => {
         onDelete={vi.fn()}
         onSaveVersion={onSaveVersion}
         onSaveMetadata={onSaveMetadata}
+        onSaveLatestVersionMetadata={onSaveLatestVersionMetadata}
         onToggleFavorite={vi.fn()}
         onCopyEditor={vi.fn()}
         onDownloadEditor={vi.fn()}
@@ -115,10 +118,24 @@ describe("PromptDetailPage", () => {
 
     await user.clear(screen.getByLabelText("亮点"));
     await user.type(screen.getByLabelText("亮点"), "V5大概答复");
-    expect(onSaveMetadata).toHaveBeenCalledTimes(1);
+    await user.tab();
+    expect(onSaveLatestVersionMetadata).toHaveBeenCalledWith({
+      description: "V5大概答复",
+      tags: [
+        expect.objectContaining({ label: "review", color: expect.any(String) }),
+        expect.objectContaining({ label: "cleanup", color: expect.any(String) })
+      ]
+    });
 
     await user.type(screen.getByLabelText("添加标签"), "Deepseek V3{Enter}");
-    expect(onSaveMetadata).toHaveBeenCalledTimes(1);
+    expect(onSaveLatestVersionMetadata).toHaveBeenLastCalledWith({
+      description: "V5大概答复",
+      tags: [
+        expect.objectContaining({ label: "review", color: expect.any(String) }),
+        expect.objectContaining({ label: "cleanup", color: expect.any(String) }),
+        expect.objectContaining({ label: "Deepseek V", color: expect.any(String) })
+      ]
+    });
 
     await user.click(screen.getByRole("button", { name: "保存新版本" }));
     await user.click(screen.getByRole("button", { name: "确认保存" }));
@@ -171,6 +188,7 @@ describe("PromptDetailPage", () => {
       onDelete: vi.fn(),
       onSaveVersion: vi.fn(),
       onSaveMetadata: vi.fn(),
+      onSaveLatestVersionMetadata: vi.fn(),
       onToggleFavorite: vi.fn(),
       onCopyEditor: vi.fn(),
       onDownloadEditor: vi.fn(),
@@ -241,6 +259,7 @@ describe("PromptDetailPage", () => {
         onDelete={vi.fn()}
         onSaveVersion={vi.fn()}
         onSaveMetadata={vi.fn()}
+        onSaveLatestVersionMetadata={vi.fn()}
         onToggleFavorite={vi.fn()}
         onCopyEditor={vi.fn()}
         onDownloadEditor={vi.fn()}

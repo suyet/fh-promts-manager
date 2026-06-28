@@ -17,6 +17,7 @@ export function PromptWorkspace({
   latestVersionId,
   onChangeContent,
   onChangeDescription,
+  onBlurDescription,
   onChangeTags,
   onCopyEditor,
   onDownloadEditor,
@@ -29,6 +30,7 @@ export function PromptWorkspace({
   latestVersionId?: string;
   onChangeContent: (value: string) => void;
   onChangeDescription: (value: string) => void;
+  onBlurDescription?: () => void;
   onChangeTags: (tags: PromptTag[]) => void;
   onCopyEditor: (content: string) => void;
   onDownloadEditor: (content: string) => void;
@@ -54,6 +56,7 @@ export function PromptWorkspace({
                 maxLength={FIELD_LIMITS.highlight}
                 value={description}
                 onChange={(event) => onChangeDescription(event.target.value.slice(0, FIELD_LIMITS.highlight))}
+                onBlur={onBlurDescription}
               />
             </label>
             <div className="field">

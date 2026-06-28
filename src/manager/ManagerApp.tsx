@@ -411,6 +411,12 @@ export function ManagerApp() {
             favorite: selectedItem.prompt.favorite
           }).then(refreshItems);
         }}
+        onSaveLatestVersionMetadata={(input) => {
+          void promptService.updateLatestVersionMetadata(selectedItem.prompt.id, input).then(async () => {
+            await refreshItems();
+            setVersions(await repositories.versions.listByPrompt(selectedItem.prompt.id));
+          });
+        }}
         onToggleFavorite={() => {
           void promptService.updatePrompt(selectedItem.prompt.id, {
             title: selectedItem.prompt.title,

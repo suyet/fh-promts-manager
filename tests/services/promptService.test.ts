@@ -126,6 +126,24 @@ describe("promptService", () => {
     await expect(repositories.versions.listByPrompt("prompt-refactor")).resolves.toHaveLength(1);
   });
 
+  it("updates the latest version highlight and tags for auto-save", async () => {
+    await repositories.scenes.put(sceneFactory());
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory());
+
+    const updated = await promptService.updateLatestVersionMetadata("prompt-refactor", {
+      description: "自动保存后的亮点",
+      tags: ["autosave-tag"]
+    });
+
+    const latestVersion = await repositories.versions.get(updated.latestVersionId);
+    expect(latestVersion).toMatchObject({
+      description: "自动保存后的亮点",
+      tags: [expect.objectContaining({ label: "autosave-tag", color: expect.any(String) })]
+    });
+    expect(updated.updatedAt).toBe("2026-06-26T08:00:00.000Z");
+  });
+
   it("records usage and deletes prompt versions and usage together", async () => {
     await repositories.scenes.put(sceneFactory());
     await repositories.prompts.put(promptFactory());

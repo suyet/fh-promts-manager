@@ -105,6 +105,31 @@ export const promptService = {
     return updated;
   },
 
+  async updateLatestVersionMetadata(
+    promptId: string,
+    input: { description: string; tags: StoredPromptTag[] }
+  ): Promise<Prompt> {
+    const prompt = await repositories.prompts.get(promptId);
+    if (!prompt) throw new Error("Prompt not found.");
+    const latestVersion = await repositories.versions.get(prompt.latestVersionId);
+    if (!latestVersion) throw new Error("Latest version not found.");
+    const timestamp = now();
+    const updatedPrompt: Prompt = {
+      ...prompt,
+      updatedAt: timestamp
+    };
+    const updatedVersion: PromptVersion = {
+      ...latestVersion,
+      description: input.description.trim(),
+      tags: normalizePromptTags(input.tags)
+    };
+    await db.transaction("rw", db.prompts, db.versions, async () => {
+      await db.versions.put(updatedVersion);
+      await db.prompts.put(updatedPrompt);
+    });
+    return updatedPrompt;
+  },
+
   async searchPrompts(query: PromptSearchQuery): Promise<PromptWithLatest[]> {
     const text = query.text.trim().toLowerCase();
     const [prompts, scenes] = await Promise.all([repositories.prompts.list(), repositories.scenes.list()]);
