@@ -50,13 +50,13 @@ export function versionFactory(overrides: Partial<PromptVersion> = {}): PromptVe
 }
 
 export function imageAssetFactory(overrides: Partial<ImageAsset> = {}): ImageAsset {
-  const blob = new Blob(["image-bytes"], { type: "image/png" });
+  const data = new TextEncoder().encode("image-bytes").buffer;
   return {
     id: "asset-cover",
     mimeType: "image/png",
-    size: blob.size,
+    size: data.byteLength,
     sha256: "hash-cover",
-    blob,
+    data,
     createdAt: iso(),
     ...overrides
   };

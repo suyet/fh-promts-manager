@@ -98,7 +98,7 @@ export interface ImageAsset {
   mimeType: ImageMimeType;
   size: number;
   sha256: string;
-  blob: Blob;
+  data: ArrayBuffer;
   createdAt: IsoDateString;
 }
 
