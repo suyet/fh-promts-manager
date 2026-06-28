@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "../../shared/components/Button";
 import { IconButton } from "../../shared/components/IconButton";
 import { FIELD_LIMITS, SCENE_COLORS } from "../../shared/constants";
-import type { Scene, SceneColor, SceneIcon } from "../../shared/types";
+import type { PromptType, Scene, SceneColor, SceneIcon } from "../../shared/types";
 import {
   BarChart3,
   BookOpen,
@@ -33,6 +33,7 @@ export interface SceneFormInput {
   description: string;
   icon: SceneIcon;
   color: SceneColor;
+  promptType: PromptType;
 }
 
 const iconOptions: Array<{ value: SceneIcon; label: string; Icon: typeof Briefcase }> = [
@@ -84,6 +85,7 @@ export function SceneFormDialog({
   const [description, setDescription] = useState(scene?.description ?? "");
   const [icon, setIcon] = useState<SceneIcon>(scene?.icon ?? "briefcase");
   const [color, setColor] = useState<SceneColor>(scene?.color ?? "gray");
+  const [promptType, setPromptType] = useState<PromptType>(scene?.promptType ?? "text");
   const [openPicker, setOpenPicker] = useState<"icon" | "color" | null>(null);
   const title = scene ? "编辑场景" : "新建场景";
   const selectedIcon = iconOptions.find((item) => item.value === icon) ?? iconOptions[0];
@@ -94,7 +96,7 @@ export function SceneFormDialog({
 
   function submit() {
     if (!canSave) return;
-    onSave({ name: name.trim(), description: description.trim(), icon, color });
+    onSave({ name: name.trim(), description: description.trim(), icon, color, promptType });
   }
 
   return (
@@ -111,7 +113,7 @@ export function SceneFormDialog({
             </span>
             <div>
               <strong>{name.trim() || "新场景"}</strong>
-              <p>{description.trim() || "填写摘要后将在这里预览"}</p>
+              <p>{promptType === "image" ? "生图" : "文本"} · {description.trim() || "填写摘要后将在这里预览"}</p>
             </div>
           </div>
           <label className="field">
@@ -132,6 +134,31 @@ export function SceneFormDialog({
               onChange={(event) => setDescription(event.target.value.slice(0, FIELD_LIMITS.sceneDescription))}
             />
           </label>
+          <div className="field">
+            <span>类型</span>
+            <div className="segmented-control" role="radiogroup" aria-label="场景类型">
+              <label className={promptType === "text" ? "segment active" : "segment"}>
+                <input
+                  type="radio"
+                  name="scene-prompt-type"
+                  checked={promptType === "text"}
+                  disabled={Boolean(scene)}
+                  onChange={() => setPromptType("text")}
+                />
+                文本
+              </label>
+              <label className={promptType === "image" ? "segment active" : "segment"}>
+                <input
+                  type="radio"
+                  name="scene-prompt-type"
+                  checked={promptType === "image"}
+                  disabled={Boolean(scene)}
+                  onChange={() => setPromptType("image")}
+                />
+                生图
+              </label>
+            </div>
+          </div>
           <div className="field">
             <span>图标</span>
             <div className="picker-field">

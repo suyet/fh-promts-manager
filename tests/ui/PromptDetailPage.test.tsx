@@ -1,10 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PromptDetailPage } from "../../src/manager/pages/PromptDetailPage";
-import { promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
+import { resetDatabase } from "../../src/shared/data/db";
+import { repositories } from "../../src/shared/data/repositories";
+import { imageAssetFactory, promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
 
 describe("PromptDetailPage", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+    vi.restoreAllMocks();
+  });
+
   it("uses a layered detail header and editor toolbar without an editor save button", async () => {
     const user = userEvent.setup();
     const onSaveVersion = vi.fn();
@@ -162,6 +169,49 @@ describe("PromptDetailPage", () => {
     expect(screen.getByText("1234567890")).toBeInTheDocument();
   });
 
+  it("shows the latest image and allows replacing it when saving an image prompt version", async () => {
+    const user = userEvent.setup();
+    const onSaveVersion = vi.fn();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:detail-cover");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    await repositories.imageAssets.put(imageAssetFactory());
+    const latestVersion = versionFactory({ imageAssetId: "asset-cover" });
+
+    render(
+      <PromptDetailPage
+        item={{
+          prompt: promptFactory(),
+          latestVersion,
+          scene: sceneFactory({ promptType: "image", icon: "image" })
+        }}
+        versions={[latestVersion]}
+        onBack={vi.fn()}
+        onCopyLatest={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveVersion={onSaveVersion}
+        onSaveMetadata={vi.fn()}
+        onSaveLatestVersionMetadata={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onCopyEditor={vi.fn()}
+        onDownloadEditor={vi.fn()}
+        onCompareToLatest={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByAltText("Code Refactor Helper 最新图片")).toHaveAttribute("src", "blob:detail-cover");
+    await user.click(screen.getByRole("button", { name: "保存新版本" }));
+    expect(screen.getByText("版本图片")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "确认保存" }));
+    expect(onSaveVersion).toHaveBeenLastCalledWith(expect.not.objectContaining({ imageFile: expect.any(File) }));
+
+    await user.click(screen.getByRole("button", { name: "保存新版本" }));
+    const replacement = new File(["new-image"], "new-cover.png", { type: "image/png" });
+    await user.upload(screen.getByLabelText("替换版本图片"), replacement);
+    await user.click(screen.getByRole("button", { name: "确认保存" }));
+    expect(onSaveVersion).toHaveBeenLastCalledWith(expect.objectContaining({ imageFile: replacement }));
+  });
+
+
   it("refreshes editor state when the latest version changes", async () => {
     const firstVersion = versionFactory({
       id: "version-1",
@@ -280,5 +330,52 @@ describe("PromptDetailPage", () => {
     await user.click(screen.getAllByLabelText("与最新版本对比")[0]);
 
     expect(onCompareToLatest).toHaveBeenCalledWith("version-2");
+  });
+
+  it("opens a read-only version preview modal with image and copy action", async () => {
+    const user = userEvent.setup();
+    const onCopyVersion = vi.fn();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:history-cover");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    await repositories.imageAssets.put(imageAssetFactory());
+    const latest = versionFactory({ id: "version-2", versionNumber: 2, imageAssetId: "asset-cover" });
+    const old = versionFactory({
+      id: "version-1",
+      versionNumber: 1,
+      content: "历史版本正文",
+      imageAssetId: "asset-cover",
+      createdAt: "2026-01-21T00:00:00.000Z"
+    });
+
+    render(
+      <PromptDetailPage
+        item={{
+          prompt: promptFactory({ latestVersionId: "version-2", latestVersionNumber: 2 }),
+          latestVersion: latest,
+          scene: sceneFactory({ promptType: "image", icon: "image" })
+        }}
+        versions={[latest, old]}
+        onBack={vi.fn()}
+        onCopyLatest={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveVersion={vi.fn()}
+        onSaveMetadata={vi.fn()}
+        onSaveLatestVersionMetadata={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onCopyEditor={vi.fn()}
+        onDownloadEditor={vi.fn()}
+        onCompareToLatest={vi.fn()}
+        onCopyVersion={onCopyVersion}
+      />
+    );
+
+    await user.click(screen.getByText("v1"));
+
+    expect(screen.getByRole("dialog", { name: "v1 版本预览" })).toBeInTheDocument();
+    expect(await screen.findByAltText("v1 图片")).toHaveAttribute("src", "blob:history-cover");
+    expect(screen.getByText("历史版本正文")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "恢复版本" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "复制提示词" }));
+    expect(onCopyVersion).toHaveBeenCalledWith("version-1");
   });
 });

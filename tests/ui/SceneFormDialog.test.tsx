@@ -16,6 +16,8 @@ describe("SceneFormDialog", () => {
     expect(screen.queryByLabelText("选择颜色：粉色")).not.toBeInTheDocument();
     expect(screen.getByLabelText("打开图标库")).toHaveTextContent("基础");
     expect(screen.getByLabelText("打开颜色库")).toHaveTextContent("灰色");
+    expect(screen.getByRole("radio", { name: "文本" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "生图" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "保存场景" })).toBeDisabled();
 
     await user.type(screen.getByLabelText("场景名称"), "写作");
@@ -38,13 +40,39 @@ describe("SceneFormDialog", () => {
     await user.click(screen.getByLabelText("打开颜色库"));
     expect(screen.getAllByRole("menuitemradio", { name: /选择颜色：/ })).toHaveLength(10);
     await user.click(screen.getByLabelText("选择颜色：粉色"));
+    await user.click(screen.getByRole("radio", { name: "生图" }));
     await user.click(screen.getByRole("button", { name: "保存场景" }));
 
     expect(onSave).toHaveBeenCalledWith({
       name: "写作",
       description: "写作助手",
       icon: "code",
-      color: "pink"
+      color: "pink",
+      promptType: "image"
     });
+  });
+
+  it("shows but locks prompt type when editing a scene", () => {
+    render(
+      <SceneFormDialog
+        scene={{
+          id: "scene-image",
+          name: "生图",
+          description: "图片提示词",
+          icon: "image",
+          color: "sky",
+          promptType: "image",
+          sortOrder: 1,
+          createdAt: "2026-06-26T08:00:00.000Z",
+          updatedAt: "2026-06-26T08:00:00.000Z"
+        }}
+        onCancel={vi.fn()}
+        onSave={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("radio", { name: "生图" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "文本" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "生图" })).toBeDisabled();
   });
 });

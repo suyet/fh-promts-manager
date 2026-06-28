@@ -1,11 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import JSZip from "jszip";
 import { ManagerApp } from "../../src/manager/ManagerApp";
 import { resetDatabase } from "../../src/shared/data/db";
 import { repositories } from "../../src/shared/data/repositories";
 import { promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
-import type { ExportPayload } from "../../src/shared/types";
 
 describe("ManagerApp", () => {
   beforeEach(async () => {
@@ -59,6 +59,37 @@ describe("ManagerApp", () => {
       expect.objectContaining({ label: "beta", color: expect.any(String) })
     ]);
     expect(savedTags[0]).not.toMatchObject({ color: savedTags[1].color });
+  });
+
+  it("creates an image prompt with a required cover image", async () => {
+    const user = userEvent.setup();
+    await repositories.scenes.put(sceneFactory({ promptType: "image", icon: "image", name: "生图场景" }));
+
+    render(<ManagerApp />);
+
+    await screen.findByRole("heading", { name: "生图场景" });
+    await user.click(screen.getByRole("button", { name: "新建" }));
+    expect(await screen.findByText("上传封面图片")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Prompt 标题"), "图片 Prompt");
+    await user.type(screen.getByLabelText("亮点"), "图片亮点");
+    await user.type(screen.getByLabelText("提示词正文"), "生成一张产品图");
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+
+    await user.upload(
+      screen.getByLabelText("上传封面图片"),
+      new File(["image-bytes"], "cover.png", { type: "image/png" })
+    );
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(async () => {
+      const prompts = await repositories.prompts.list();
+      expect(prompts[0].title).toBe("图片 Prompt");
+      const versions = await repositories.versions.listByPrompt(prompts[0].id);
+      expect(versions[0].imageAssetId).toBeTruthy();
+      await expect(repositories.imageAssets.get(versions[0].imageAssetId!)).resolves.toBeTruthy();
+    });
   });
 
   it("toggles favorite and copies the latest version from prompt cards", async () => {
@@ -172,7 +203,7 @@ describe("ManagerApp", () => {
     });
   });
 
-  it("exports a json backup from the top bar", async () => {
+  it("exports a zip backup from the top bar", async () => {
     const user = userEvent.setup();
     await repositories.scenes.put(sceneFactory());
     const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:backup");
@@ -185,13 +216,14 @@ describe("ManagerApp", () => {
 
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
     expect(createObjectURL).toHaveBeenCalledTimes(1);
+    expect((click.mock.instances[0] as HTMLAnchorElement | undefined)?.download).toContain(".zip");
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:backup");
     expect(await screen.findByRole("status")).toHaveTextContent("导出完成");
   });
 
-  it("previews and imports a json backup", async () => {
+  it("previews and imports a zip backup", async () => {
     const user = userEvent.setup();
-    const payload: ExportPayload = {
+    const payload = {
       schemaVersion: 2,
       exportedAt: "2026-06-26T08:00:00.000Z",
       scenes: [sceneFactory({ id: "scene-writing", name: "写作", icon: "pen", color: "pink" })],
@@ -199,13 +231,23 @@ describe("ManagerApp", () => {
       versions: [],
       usageRecords: []
     };
+    const zip = new JSZip();
+    zip.file("manifest.json", JSON.stringify({
+      app: "fh-prompt-manager",
+      schemaVersion: 2,
+      exportedAt: payload.exportedAt,
+      counts: { scenes: 1, prompts: 0, versions: 0, usageRecords: 0, imageAssets: 0 },
+      assets: []
+    }));
+    zip.file("data.json", JSON.stringify(payload));
+    const backup = await zip.generateAsync({ type: "blob" });
 
     render(<ManagerApp />);
 
     await user.click(screen.getByRole("button", { name: "导入" }));
     await user.upload(
       await screen.findByLabelText("选择备份文件"),
-      new File([JSON.stringify(payload)], "backup.json", { type: "application/json" })
+      new File([backup], "backup.zip", { type: "application/zip" })
     );
     expect(await screen.findByText("1")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "执行导入" }));

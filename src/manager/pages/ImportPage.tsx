@@ -41,7 +41,7 @@ export function ImportPage({
           <input
             aria-label="选择备份文件"
             type="file"
-            accept="application/json,.json"
+            accept="application/zip,.zip"
             onChange={(event) => {
               void handleFile(event.target.files?.[0]);
             }}
@@ -52,6 +52,7 @@ export function ImportPage({
           <div><strong>{currentPreview?.scenes ?? 0}</strong><span>Scene</span></div>
           <div><strong>{currentPreview?.prompts ?? 0}</strong><span>Prompt</span></div>
           <div><strong>{currentPreview?.versions ?? 0}</strong><span>版本</span></div>
+          <div><strong>{currentPreview?.imageAssets ?? 0}</strong><span>图片</span></div>
         </div>
         <div className="page-actions">
           <Button onClick={onCancel}><X className="icon" />取消</Button>

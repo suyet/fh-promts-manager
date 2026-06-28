@@ -1,10 +1,17 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LibraryPage } from "../../src/manager/pages/LibraryPage";
-import { promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
+import { resetDatabase } from "../../src/shared/data/db";
+import { repositories } from "../../src/shared/data/repositories";
+import { imageAssetFactory, promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
 
 describe("LibraryPage", () => {
+  beforeEach(async () => {
+    await resetDatabase();
+    vi.restoreAllMocks();
+  });
+
   it("renders scenes and prompt cards with icon actions", async () => {
     const user = userEvent.setup();
     const onOpenPrompt = vi.fn();
@@ -37,6 +44,8 @@ describe("LibraryPage", () => {
     );
 
     expect(screen.getAllByText("代码重构").some((element) => element.classList.contains("scene-title"))).toBe(true);
+    expect(screen.getAllByText("文本").some((element) => element.classList.contains("scene-type-pill"))).toBe(true);
+    expect(screen.getAllByText("文本").some((element) => element.closest(".page-title-line"))).toBe(true);
     expect(screen.getByText("Code Refactor Helper")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "详情" })).not.toBeInTheDocument();
     expect(screen.getByText("latest-tag")).toHaveClass("tag");
@@ -120,6 +129,50 @@ describe("LibraryPage", () => {
     expect(onReorderPrompt).toHaveBeenCalledWith("prompt-old", "prompt-new");
   });
 
+  it("renders image prompt cards around the cover image with compact metadata", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:image-card");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    await repositories.imageAssets.put(imageAssetFactory());
+    const imageScene = sceneFactory({ promptType: "image", icon: "image", name: "生图场景" });
+
+    render(
+      <LibraryPage
+        scenes={[imageScene]}
+        selectedSceneId="scene-code"
+        prompts={[{
+          prompt: promptFactory(),
+          latestVersion: versionFactory({
+            imageAssetId: "asset-cover",
+            content: "图片提示词正文",
+            description: "图片亮点",
+            tags: ["image-tag"]
+          }),
+          scene: imageScene
+        }]}
+        onSelectScene={vi.fn()}
+        onOpenPrompt={vi.fn()}
+        onCopyPrompt={vi.fn()}
+        onTogglePromptFavorite={vi.fn()}
+        onCreatePrompt={vi.fn()}
+        onCreateScene={vi.fn()}
+        onEditScene={vi.fn()}
+        onDeleteScene={vi.fn()}
+        onToggleSceneSort={vi.fn()}
+        onReorderScene={vi.fn()}
+      />
+    );
+
+    const card = screen.getByTestId("prompt-card-prompt-refactor");
+    expect(card).toHaveClass("image-prompt-card");
+    expect(await screen.findByAltText("Code Refactor Helper 封面")).toHaveAttribute("src", "blob:image-card");
+    expect(within(card).getByText("Code Refactor Helper")).toBeInTheDocument();
+    expect(within(card).getByText("v1")).toBeInTheDocument();
+    expect(within(card).queryByText("图片提示词正文")).not.toBeInTheDocument();
+    expect(within(card).queryByText("image-tag")).not.toBeInTheDocument();
+    expect(within(card).queryByLabelText("复制最新版本")).not.toBeInTheDocument();
+  });
+
+
   it("renders scene management controls and keeps scene metadata separated", async () => {
     const user = userEvent.setup();
     const onCreateScene = vi.fn();
@@ -146,7 +199,8 @@ describe("LibraryPage", () => {
 
     expect(screen.getByText("场景")).toHaveClass("scene-section-title");
     expect(screen.getAllByText("代码重构").find((element) => element.classList.contains("scene-title"))).toBeTruthy();
-    expect(screen.getByText("1 个提示词")).toHaveClass("scene-count-line");
+    expect(screen.getByText("1 个提示词").closest(".scene-count-line")).toBeTruthy();
+    expect(screen.getAllByText("文本").some((element) => element.classList.contains("scene-type-pill"))).toBe(true);
     expect(screen.getByText("工程质量与 review")).toHaveClass("scene-desc");
     expect(screen.getByText("工程质量与 review").closest(".scene-select")).toBeNull();
     expect(screen.getByText("工程质量与 review").closest(".scene-desc-button")).toBeTruthy();

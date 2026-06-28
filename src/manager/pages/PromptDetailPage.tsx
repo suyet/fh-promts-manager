@@ -2,6 +2,7 @@ import { ArrowLeft, Copy, Save, Star, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../../shared/components/Button";
 import { IconButton } from "../../shared/components/IconButton";
+import { ImageAssetPreview } from "../../shared/components/ImageAssetPreview";
 import { FIELD_LIMITS } from "../../shared/constants";
 import { normalizePromptTags } from "../../shared/tagUtils";
 import { PromptWorkspace } from "../components/PromptWorkspace";
@@ -24,20 +25,22 @@ export function PromptDetailPage({
   onToggleFavorite,
   onCopyEditor,
   onDownloadEditor,
-  onCompareToLatest
+  onCompareToLatest,
+  onCopyVersion
 }: {
   item: PromptWithLatest;
   versions: PromptVersion[];
   onBack: () => void;
   onCopyLatest: () => void;
   onDelete: () => void;
-  onSaveVersion: (input: { content: string; description: string; tags: PromptTag[]; customVersionLabel?: string }) => void;
+  onSaveVersion: (input: { content: string; description: string; tags: PromptTag[]; customVersionLabel?: string; imageFile?: File }) => void;
   onSaveMetadata: (input: { title: string; favorite: boolean }) => void;
   onSaveLatestVersionMetadata: (input: { description: string; tags: PromptTag[] }) => void;
   onToggleFavorite: () => void;
   onCopyEditor: (content: string) => void;
   onDownloadEditor: (content: string) => void;
   onCompareToLatest: (versionId: string) => void;
+  onCopyVersion?: (versionId: string) => void;
 }) {
   const [content, setContent] = useState(item.latestVersion.content);
   const [title, setTitle] = useState(item.prompt.title);
@@ -46,8 +49,10 @@ export function PromptDetailPage({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [versionLabel, setVersionLabel] = useState(`v${item.prompt.latestVersionNumber + 1}`);
+  const [replacementImageFile, setReplacementImageFile] = useState<File | undefined>(undefined);
   const hasUnsavedChanges = content !== item.latestVersion.content;
   const displayVersionLabel = item.latestVersion.customVersionLabel || `v${item.prompt.latestVersionNumber}`;
+  const isImagePrompt = item.scene.promptType === "image";
 
   useEffect(() => {
     setContent(item.latestVersion.content);
@@ -55,6 +60,7 @@ export function PromptDetailPage({
     setDescription(item.latestVersion.description);
     setTags(normalizePromptTags(item.latestVersion.tags));
     setVersionLabel(`v${item.prompt.latestVersionNumber + 1}`);
+    setReplacementImageFile(undefined);
     setIsEditingTitle(false);
     setIsSaveDialogOpen(false);
   }, [item.prompt.id, item.latestVersion.id]);
@@ -109,12 +115,14 @@ export function PromptDetailPage({
   function confirmSaveVersion() {
     const defaultVersionLabel = `v${item.prompt.latestVersionNumber + 1}`;
     const customVersionLabel = versionLabel.trim();
-    onSaveVersion({
+    const payload: { content: string; description: string; tags: PromptTag[]; customVersionLabel?: string; imageFile?: File } = {
       content,
       description: description.trim(),
       tags,
       customVersionLabel: customVersionLabel && customVersionLabel !== defaultVersionLabel ? customVersionLabel : undefined
-    });
+    };
+    if (replacementImageFile) payload.imageFile = replacementImageFile;
+    onSaveVersion(payload);
     setIsSaveDialogOpen(false);
   }
 
@@ -145,6 +153,7 @@ export function PromptDetailPage({
             <span className="version-pill">{displayVersionLabel}</span>
             <div className="detail-sub-meta">
               <span className="detail-sub-meta-item">场景：{item.scene.name}</span>
+              <span className="detail-sub-meta-item">类型：{isImagePrompt ? "生图" : "文本"}</span>
               <span className="detail-sub-meta-item">更新于 {formatDate(item.prompt.updatedAt)}</span>
             </div>
           </div>
@@ -155,6 +164,7 @@ export function PromptDetailPage({
               icon={<Save className="icon" />}
               onClick={() => {
                 setVersionLabel(`v${item.prompt.latestVersionNumber + 1}`);
+                setReplacementImageFile(undefined);
                 setIsSaveDialogOpen(true);
               }}
             />
@@ -169,6 +179,15 @@ export function PromptDetailPage({
             <Button className="detail-copy-button" variant="primary" onClick={onCopyLatest}><Copy className="icon" />复制最新版本</Button>
           </div>
         </div>
+        {isImagePrompt && (
+          <section className="image-detail-preview">
+            <ImageAssetPreview
+              assetId={item.latestVersion.imageAssetId}
+              alt={`${item.prompt.title} 最新图片`}
+              className="image-detail-preview-img"
+            />
+          </section>
+        )}
         <PromptWorkspace
           content={content}
           description={description}
@@ -182,6 +201,7 @@ export function PromptDetailPage({
           onCopyEditor={onCopyEditor}
           onDownloadEditor={onDownloadEditor}
           onCompareToLatest={onCompareToLatest}
+          onCopyVersion={onCopyVersion}
         />
       </section>
       {isSaveDialogOpen && (
@@ -193,6 +213,17 @@ export function PromptDetailPage({
             </div>
             <div className="save-version-body">
               <p>请确认亮点和标签已更新</p>
+              {isImagePrompt && (
+                <label className="field">
+                  <span>版本图片</span>
+                  <input
+                    aria-label="替换版本图片"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => setReplacementImageFile(event.target.files?.[0])}
+                  />
+                </label>
+              )}
               <label className="field">
                 <span>版本号</span>
                 <input

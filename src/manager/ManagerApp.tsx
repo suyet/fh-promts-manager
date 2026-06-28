@@ -5,11 +5,12 @@ import { db } from "../shared/data/db";
 import { repositories } from "../shared/data/repositories";
 import { diffService, type VersionDiff } from "../shared/services/diffService";
 import { copyText } from "../shared/services/clipboardService";
-import { downloadJsonFile, downloadTextFile } from "../shared/services/downloadService";
+import { downloadBlobFile, downloadTextFile } from "../shared/services/downloadService";
+import { imageAssetService } from "../shared/services/imageAssetService";
 import { importExportService } from "../shared/services/importExportService";
 import { promptService } from "../shared/services/promptService";
 import "../shared/styles/app.css";
-import type { ExportPayload, ImportPreview, PromptTag, PromptVersion, PromptWithLatest, Scene, UsageSource } from "../shared/types";
+import type { ImportPreview, PromptTag, PromptVersion, PromptWithLatest, Scene, UsageSource } from "../shared/types";
 import { SceneFormDialog, type SceneFormInput } from "./components/SceneFormDialog";
 import { DiffPage } from "./pages/DiffPage";
 import { ImportPage } from "./pages/ImportPage";
@@ -30,7 +31,7 @@ export function ManagerApp() {
   const [diff, setDiff] = useState<VersionDiff | null>(null);
   const [diffHistoryVersionId, setDiffHistoryVersionId] = useState<string | null>(null);
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
-  const [importPayload, setImportPayload] = useState<ExportPayload | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [sceneFormScene, setSceneFormScene] = useState<Scene | null | undefined>(undefined);
   const [isSortingScenes, setIsSortingScenes] = useState(false);
@@ -117,7 +118,9 @@ export function ManagerApp() {
       historyLabel: `v${historyVersion.versionNumber}`,
       latestLabel: `v${latestVersion.versionNumber} Latest`,
       historyContent: historyVersion.content,
-      latestContent: latestVersion.content
+      latestContent: latestVersion.content,
+      historyImageAssetId: historyVersion.imageAssetId,
+      latestImageAssetId: latestVersion.imageAssetId
     }));
     setDiffHistoryVersionId(versionId);
     setView("diff");
@@ -167,7 +170,7 @@ export function ManagerApp() {
       description: input.description,
       icon: input.icon,
       color: input.color,
-      promptType: "text",
+      promptType: input.promptType,
       sortOrder: scenes.reduce((maximum, item) => Math.max(maximum, item.sortOrder), 0) + 1,
       createdAt: timestamp,
       updatedAt: timestamp
@@ -186,6 +189,7 @@ export function ManagerApp() {
       description: input.description,
       icon: input.icon,
       color: input.color,
+      promptType: scene.promptType,
       updatedAt: new Date().toISOString()
     });
     setSceneFormScene(undefined);
@@ -262,10 +266,13 @@ export function ManagerApp() {
     });
   }
 
-  async function createPrompt(input: { title: string; description: string; tags: PromptTag[]; content: string }) {
+  async function createPrompt(input: { title: string; description: string; tags: PromptTag[]; content: string; imageFile?: File }) {
     const title = input.title.trim();
     const content = input.content;
     if (!title || !content.trim() || !selectedSceneId) return;
+    const selectedScene = scenes.find((scene) => scene.id === selectedSceneId);
+    if (selectedScene?.promptType === "image" && !input.imageFile) return;
+    const imageAsset = input.imageFile ? await imageAssetService.createFromFile(input.imageFile) : undefined;
     const prompt = await promptService.createPrompt({
       sceneId: selectedSceneId,
       title,
@@ -273,6 +280,7 @@ export function ManagerApp() {
       tags: input.tags,
       favorite: false,
       content,
+      imageAssetId: imageAsset?.id,
       note: "初始版本"
     });
     await refreshItems();
@@ -284,43 +292,22 @@ export function ManagerApp() {
 
   async function exportAll() {
     try {
-      const payload = await importExportService.exportAll();
-      downloadJsonFile(`fh-prompt-manager-${new Date().toISOString().slice(0, 10)}.json`, payload);
+      const payload = await importExportService.exportZip();
+      downloadBlobFile(`fh-prompt-manager-${new Date().toISOString().slice(0, 10)}.zip`, payload);
       showToast("导出完成");
     } catch {
       showToast("导出失败，请重试");
     }
   }
 
-  function isExportPayload(value: unknown): value is ExportPayload {
-    if (!value || typeof value !== "object") return false;
-    const candidate = value as Partial<ExportPayload>;
-    return candidate.schemaVersion === 2
-      && Array.isArray(candidate.scenes)
-      && Array.isArray(candidate.prompts)
-      && Array.isArray(candidate.versions)
-      && Array.isArray(candidate.usageRecords);
-  }
-
   async function previewImportFile(file: File) {
     setImportError(null);
     setImportPreview(null);
-    setImportPayload(null);
-    let parsed: unknown;
+    setImportFile(null);
     try {
-      parsed = JSON.parse(await file.text());
-    } catch {
-      setImportError("文件格式错误");
-      throw new Error("Invalid JSON.");
-    }
-    if (!isExportPayload(parsed)) {
-      setImportError("导入文件版本不支持");
-      throw new Error("Unsupported import payload.");
-    }
-    try {
-      const preview = await importExportService.previewImport(parsed);
+      const preview = await importExportService.previewZipImport(file);
       setImportPreview(preview);
-      setImportPayload(parsed);
+      setImportFile(file);
       return preview;
     } catch (error) {
       setImportError(error instanceof Error ? error.message : "导入预览失败");
@@ -329,9 +316,9 @@ export function ManagerApp() {
   }
 
   async function confirmImport() {
-    if (!importPayload) return;
-    await importExportService.importAll(importPayload);
-    setImportPayload(null);
+    if (!importFile) return;
+    await importExportService.importZip(importFile);
+    setImportFile(null);
     setImportPreview(null);
     setImportError(null);
     await loadScenes();
@@ -400,11 +387,17 @@ export function ManagerApp() {
           });
         }}
         onSaveVersion={(content) => {
-          void promptService.saveNewVersion(selectedItem.prompt.id, { ...content, note: "手动保存" }).then(() => {
+          void (async () => {
+            const imageAsset = content.imageFile ? await imageAssetService.createFromFile(content.imageFile) : undefined;
+            await promptService.saveNewVersion(selectedItem.prompt.id, {
+              ...content,
+              imageAssetId: imageAsset?.id,
+              note: "手动保存"
+            });
             void refreshItems();
             void repositories.versions.listByPrompt(selectedItem.prompt.id).then(setVersions);
             showToast("已保存新版本");
-          });
+          })();
         }}
         onSaveMetadata={(input) => {
           void promptService.updatePrompt(selectedItem.prompt.id, {
@@ -431,11 +424,15 @@ export function ManagerApp() {
           downloadTextFile(`${selectedItem.prompt.title}.md`, content, "text/markdown;charset=utf-8");
         }}
         onCompareToLatest={compareToLatest}
+        onCopyVersion={(versionId) => {
+          void copyVersion(versionId);
+        }}
       />
     );
   } else if (view === "create") {
     page = (
       <NewPromptPage
+        scene={scenes.find((scene) => scene.id === selectedSceneId) ?? null}
         onBack={() => setView("library")}
         onSave={(input) => {
           void createPrompt(input);

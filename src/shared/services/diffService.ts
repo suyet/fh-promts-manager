@@ -10,6 +10,8 @@ export interface DiffPart {
 export interface VersionDiff {
   historyLabel: string;
   latestLabel: string;
+  historyImageAssetId?: string;
+  latestImageAssetId?: string;
   parts: DiffPart[];
 }
 
@@ -19,6 +21,8 @@ export const diffService = {
     latestLabel: string;
     historyContent: string;
     latestContent: string;
+    historyImageAssetId?: string;
+    latestImageAssetId?: string;
   }): VersionDiff {
     const parts = diffLines(input.historyContent, input.latestContent)
       .filter((part) => part.value.length > 0)
@@ -29,6 +33,8 @@ export const diffService = {
     return {
       historyLabel: input.historyLabel,
       latestLabel: input.latestLabel,
+      historyImageAssetId: input.historyImageAssetId,
+      latestImageAssetId: input.latestImageAssetId,
       parts
     };
   }

@@ -21,7 +21,8 @@ export function PromptWorkspace({
   onChangeTags,
   onCopyEditor,
   onDownloadEditor,
-  onCompareToLatest
+  onCompareToLatest,
+  onCopyVersion
 }: {
   content: string;
   description: string;
@@ -35,6 +36,7 @@ export function PromptWorkspace({
   onCopyEditor: (content: string) => void;
   onDownloadEditor: (content: string) => void;
   onCompareToLatest?: (versionId: string) => void;
+  onCopyVersion?: (versionId: string) => void;
 }) {
   return (
     <div className="detail-grid">
@@ -72,6 +74,7 @@ export function PromptWorkspace({
               latestVersionId={latestVersionId}
               versions={versions}
               onCompareToLatest={onCompareToLatest}
+              onCopyVersion={onCopyVersion}
             />
           </>
         )}

@@ -4,20 +4,24 @@ import { Button } from "../../shared/components/Button";
 import { IconButton } from "../../shared/components/IconButton";
 import { FIELD_LIMITS } from "../../shared/constants";
 import { PromptWorkspace } from "../components/PromptWorkspace";
-import type { PromptTag } from "../../shared/types";
+import type { PromptTag, Scene } from "../../shared/types";
 
 export function NewPromptPage({
+  scene,
   onBack,
   onSave
 }: {
+  scene: Scene | null;
   onBack: () => void;
-  onSave: (input: { title: string; description: string; tags: PromptTag[]; content: string }) => void;
+  onSave: (input: { title: string; description: string; tags: PromptTag[]; content: string; imageFile?: File }) => void;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<PromptTag[]>([]);
   const [content, setContent] = useState("");
-  const canSave = Boolean(title.trim() && content.trim());
+  const [imageFile, setImageFile] = useState<File | undefined>(undefined);
+  const isImagePrompt = scene?.promptType === "image";
+  const canSave = Boolean(title.trim() && content.trim() && (!isImagePrompt || imageFile));
 
   return (
     <main className="main detail-main">
@@ -35,7 +39,8 @@ export function NewPromptPage({
                 title,
                 description,
                 tags,
-                content
+                content,
+                imageFile
               })}
             >
               <Save className="icon" />保存
@@ -53,6 +58,17 @@ export function NewPromptPage({
             />
           </label>
         </div>
+        {isImagePrompt && (
+          <label className="field image-upload-field">
+            <span>上传封面图片</span>
+            <input
+              aria-label="上传封面图片"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(event) => setImageFile(event.target.files?.[0])}
+            />
+          </label>
+        )}
         <PromptWorkspace
           content={content}
           description={description}

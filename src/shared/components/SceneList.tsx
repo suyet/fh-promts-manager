@@ -104,6 +104,7 @@ export function SceneList({
           {scenes.map((scene) => {
             const SceneIcon = iconByName[scene.icon];
             const promptCount = counts[scene.id] ?? 0;
+            const promptTypeLabel = scene.promptType === "image" ? "生图" : "文本";
             return (
               <div
                 className={[
@@ -131,7 +132,10 @@ export function SceneList({
                   </span>
                   <span className="scene-meta">
                     <span className="scene-title">{scene.name}</span>
-                    <span className="scene-count-line">{promptCount} 个提示词</span>
+                    <span className="scene-count-line">
+                      <span className="scene-type-pill">{promptTypeLabel}</span>
+                      <span>{promptCount} 个提示词</span>
+                    </span>
                   </span>
                 </button>
                 <button className="scene-desc-button" onClick={() => {

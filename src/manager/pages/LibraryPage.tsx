@@ -48,6 +48,7 @@ export function LibraryPage({
 }) {
   const [draggedPromptId, setDraggedPromptId] = useState<string | null>(null);
   const selectedScene = scenes.find((scene) => scene.id === selectedSceneId) || scenes[0];
+  const selectedSceneTypeLabel = selectedScene?.promptType === "image" ? "生图" : "文本";
   const canSortPrompts = prompts.length > 1;
   const counts = useMemo(() => {
     if (sceneCounts) return sceneCounts;
@@ -77,7 +78,10 @@ export function LibraryPage({
         <section className="workbench">
           <div className="page-head">
             <div>
-              <h1>{selectedScene ? selectedScene.name : "资产库"}</h1>
+              <div className="page-title-line">
+                <h1>{selectedScene ? selectedScene.name : "资产库"}</h1>
+                {selectedScene && <span className="scene-type-pill">{selectedSceneTypeLabel}</span>}
+              </div>
               <p>{prompts.length} 个 Prompt</p>
             </div>
             <div className="page-actions">

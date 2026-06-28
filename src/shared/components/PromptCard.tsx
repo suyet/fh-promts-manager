@@ -2,6 +2,7 @@ import { Clock, Copy, GripVertical, Star } from "lucide-react";
 import { getPromptTagStyle, normalizePromptTags } from "../tagUtils";
 import type { PromptWithLatest } from "../types";
 import { IconButton } from "./IconButton";
+import { ImageAssetPreview } from "./ImageAssetPreview";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -30,9 +31,37 @@ export function PromptCard({
   onDrop?: () => void;
 }) {
   const favoriteLabel = item.prompt.favorite ? "取消收藏" : "收藏";
+  const isImagePrompt = item.scene.promptType === "image";
   const openCard = () => {
     if (!isSorting) onOpen();
   };
+
+  if (isImagePrompt) {
+    return (
+      <article
+        className={isSorting ? "prompt-card image-prompt-card sorting" : "prompt-card image-prompt-card"}
+        data-testid={`prompt-card-${item.prompt.id}`}
+        draggable={isSorting}
+        onClick={openCard}
+        onDragStart={onDragStart}
+        onDragOver={(event) => {
+          if (isSorting) event.preventDefault();
+        }}
+        onDrop={onDrop}
+      >
+        {isSorting && <span className="prompt-sort-grip image-card-grip"><GripVertical className="icon" /></span>}
+        <ImageAssetPreview
+          assetId={item.latestVersion.imageAssetId}
+          alt={`${item.prompt.title} 封面`}
+          className="image-prompt-cover"
+        />
+        <div className="image-prompt-meta">
+          <h2>{item.prompt.title}</h2>
+          <span className="prompt-version">v{item.prompt.latestVersionNumber}</span>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
