@@ -1,4 +1,4 @@
-import { Copy, PanelLeft, Search } from "lucide-react";
+import { Copy, PanelLeft, Search, Star } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../shared/components/Button";
 import { IconButton } from "../shared/components/IconButton";
@@ -27,6 +27,8 @@ export function PopupApp({
 }) {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
+  const recentItems = recent.slice(0, 3);
+  const matchItems = [...matches].sort((a, b) => Number(b.prompt.favorite) - Number(a.prompt.favorite));
 
   useEffect(() => {
     return () => {
@@ -74,8 +76,8 @@ export function PopupApp({
             </button>
           ))}
         </div>
-        <PromptList title="最近使用" items={recent} onCopy={copyPrompt} />
-        <PromptList title="匹配结果" items={matches} onCopy={copyPrompt} />
+        <PromptList title="最近使用" items={recentItems} onCopy={copyPrompt} />
+        <PromptList title="匹配结果" items={matchItems} onCopy={copyPrompt} scroll />
       </div>
       <Toast message={toast} />
     </main>
@@ -85,28 +87,39 @@ export function PopupApp({
 function PromptList({
   title,
   items,
-  onCopy
+  onCopy,
+  scroll = false
 }: {
   title: string;
   items: PromptWithLatest[];
   onCopy: (promptId: string) => void;
+  scroll?: boolean;
 }) {
   const emptyText = title === "最近使用" ? "暂无最近使用" : "暂无匹配结果";
 
   return (
-    <section>
+    <section className={scroll ? "popup-section popup-match-section" : "popup-section"}>
       <h2>{title}</h2>
-      {items.length === 0 ? (
-        <p className="popup-empty">{emptyText}</p>
-      ) : items.map((item) => (
-        <article className="popup-result" key={item.prompt.id}>
-          <div>
-            <strong>{item.prompt.title}</strong>
-            <p>v{item.prompt.latestVersionNumber} - {item.scene.name}</p>
-          </div>
-          <IconButton label="复制最新版本" icon={<Copy className="icon" />} onClick={() => onCopy(item.prompt.id)} />
-        </article>
-      ))}
+      <div className={scroll ? "popup-list-scroll" : "popup-list"}>
+        {items.length === 0 ? (
+          <p className="popup-empty">{emptyText}</p>
+        ) : items.map((item) => (
+          <article className="popup-result" key={item.prompt.id}>
+            <div className="popup-result-content">
+              <strong>{item.prompt.title}</strong>
+              <p>v{item.prompt.latestVersionNumber} - {item.scene.name}</p>
+            </div>
+            <div className="popup-result-actions">
+              {item.prompt.favorite && (
+                <span className="popup-favorite favorite-active" aria-label="已收藏" title="已收藏">
+                  <Star className="icon" fill="currentColor" />
+                </span>
+              )}
+              <IconButton label="复制最新版本" icon={<Copy className="icon" />} onClick={() => onCopy(item.prompt.id)} />
+            </div>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
