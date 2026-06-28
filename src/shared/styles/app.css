@@ -52,6 +52,12 @@ button { border: 0; cursor: pointer; }
   color: var(--red);
 }
 
+.favorite-filter-button.active {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;

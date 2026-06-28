@@ -129,6 +129,118 @@ describe("LibraryPage", () => {
     expect(onReorderPrompt).toHaveBeenCalledWith("prompt-old", "prompt-new");
   });
 
+  it("filters current scene prompts by favorite and disables sorting while active", async () => {
+    const user = userEvent.setup();
+    const onTogglePromptSort = vi.fn();
+    const favoritePrompt = promptFactory({
+      id: "prompt-favorite",
+      title: "收藏 Prompt",
+      favorite: true,
+      latestVersionId: "version-favorite"
+    });
+    const plainPrompt = promptFactory({
+      id: "prompt-plain",
+      title: "普通 Prompt",
+      favorite: false,
+      latestVersionId: "version-plain",
+      sortOrder: 2
+    });
+
+    render(
+      <LibraryPage
+        scenes={[sceneFactory()]}
+        selectedSceneId="scene-code"
+        prompts={[
+          { prompt: favoritePrompt, latestVersion: versionFactory({ id: "version-favorite", promptId: "prompt-favorite" }), scene: sceneFactory() },
+          { prompt: plainPrompt, latestVersion: versionFactory({ id: "version-plain", promptId: "prompt-plain" }), scene: sceneFactory() }
+        ]}
+        onSelectScene={vi.fn()}
+        onOpenPrompt={vi.fn()}
+        onCopyPrompt={vi.fn()}
+        onTogglePromptFavorite={vi.fn()}
+        onCreatePrompt={vi.fn()}
+        onCreateScene={vi.fn()}
+        onEditScene={vi.fn()}
+        onDeleteScene={vi.fn()}
+        onToggleSceneSort={vi.fn()}
+        onReorderScene={vi.fn()}
+        onTogglePromptSort={onTogglePromptSort}
+      />
+    );
+
+    const favoriteFilter = screen.getByRole("button", { name: "只看收藏" });
+    expect(favoriteFilter.querySelector("svg")).toBeTruthy();
+    expect(favoriteFilter.compareDocumentPosition(screen.getByRole("button", { name: "排序" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await user.click(favoriteFilter);
+    expect(favoriteFilter).toHaveClass("active");
+    expect(screen.getByText("收藏 Prompt")).toBeInTheDocument();
+    expect(screen.queryByText("普通 Prompt")).not.toBeInTheDocument();
+    expect(screen.getByText("1 个 Prompt")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "排序" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "排序" }));
+    expect(onTogglePromptSort).not.toHaveBeenCalled();
+  });
+
+  it("shows a favorite-filter empty state for scenes without favorites", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <LibraryPage
+        scenes={[sceneFactory()]}
+        selectedSceneId="scene-code"
+        prompts={[{
+          prompt: promptFactory({ favorite: false }),
+          latestVersion: versionFactory(),
+          scene: sceneFactory()
+        }]}
+        onSelectScene={vi.fn()}
+        onOpenPrompt={vi.fn()}
+        onCopyPrompt={vi.fn()}
+        onTogglePromptFavorite={vi.fn()}
+        onCreatePrompt={vi.fn()}
+        onCreateScene={vi.fn()}
+        onEditScene={vi.fn()}
+        onDeleteScene={vi.fn()}
+        onToggleSceneSort={vi.fn()}
+        onReorderScene={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "只看收藏" }));
+
+    expect(screen.getByText("当前场景下还没有收藏任何 Prompt")).toHaveClass("empty-title");
+    expect(screen.getByText("收藏 Prompt 后会显示在这里。")).toHaveClass("empty-copy");
+    expect(screen.queryByTestId("prompt-card-prompt-refactor")).not.toBeInTheDocument();
+  });
+
+  it("disables the favorite filter while prompt sorting is active", () => {
+    render(
+      <LibraryPage
+        scenes={[sceneFactory()]}
+        selectedSceneId="scene-code"
+        prompts={[
+          { prompt: promptFactory({ id: "prompt-a", latestVersionId: "version-a" }), latestVersion: versionFactory({ id: "version-a", promptId: "prompt-a" }), scene: sceneFactory() },
+          { prompt: promptFactory({ id: "prompt-b", latestVersionId: "version-b" }), latestVersion: versionFactory({ id: "version-b", promptId: "prompt-b" }), scene: sceneFactory() }
+        ]}
+        onSelectScene={vi.fn()}
+        onOpenPrompt={vi.fn()}
+        onCopyPrompt={vi.fn()}
+        onTogglePromptFavorite={vi.fn()}
+        onCreatePrompt={vi.fn()}
+        onCreateScene={vi.fn()}
+        onEditScene={vi.fn()}
+        onDeleteScene={vi.fn()}
+        onToggleSceneSort={vi.fn()}
+        onReorderScene={vi.fn()}
+        isSortingPrompts
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "只看收藏" })).toBeDisabled();
+  });
+
   it("renders image prompt cards around the cover image with compact metadata", async () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:image-card");
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);

@@ -1,4 +1,4 @@
-import { ArrowUpDown, Check, Plus } from "lucide-react";
+import { ArrowUpDown, Check, Plus, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "../../shared/components/Button";
 import { PromptCard } from "../../shared/components/PromptCard";
@@ -47,8 +47,10 @@ export function LibraryPage({
   onReorderPrompt?: (draggedPromptId: string, targetPromptId: string) => void;
 }) {
   const [draggedPromptId, setDraggedPromptId] = useState<string | null>(null);
+  const [favoriteOnly, setFavoriteOnly] = useState(false);
   const selectedScene = scenes.find((scene) => scene.id === selectedSceneId) || scenes[0];
   const selectedSceneTypeLabel = selectedScene?.promptType === "image" ? "生图" : "文本";
+  const visiblePrompts = favoriteOnly ? prompts.filter((item) => item.prompt.favorite) : prompts;
   const canSortPrompts = prompts.length > 1;
   const counts = useMemo(() => {
     if (sceneCounts) return sceneCounts;
@@ -82,10 +84,17 @@ export function LibraryPage({
                 <h1>{selectedScene ? selectedScene.name : "资产库"}</h1>
                 {selectedScene && <span className="scene-type-pill">{selectedSceneTypeLabel}</span>}
               </div>
-              <p>{prompts.length} 个 Prompt</p>
+              <p>{visiblePrompts.length} 个 Prompt</p>
             </div>
             <div className="page-actions">
-              <Button disabled={!canSortPrompts || (isPromptSortDisabled && !isSortingPrompts)} onClick={onTogglePromptSort}>
+              <Button
+                className={favoriteOnly ? "favorite-filter-button active" : "favorite-filter-button"}
+                disabled={isSortingPrompts}
+                onClick={() => setFavoriteOnly((current) => !current)}
+              >
+                <Star className="icon" fill={favoriteOnly ? "currentColor" : "none"} />只看收藏
+              </Button>
+              <Button disabled={favoriteOnly || !canSortPrompts || (isPromptSortDisabled && !isSortingPrompts)} onClick={onTogglePromptSort}>
                 {isSortingPrompts ? <Check className="icon" /> : <ArrowUpDown className="icon" />}
                 {isSortingPrompts ? "保存排序" : "排序"}
               </Button>
@@ -93,14 +102,16 @@ export function LibraryPage({
             </div>
           </div>
           {isSortingPrompts && <div className="sort-hint prompt-sort-hint">拖动 Prompt 卡片调整顺序</div>}
-          {prompts.length === 0 ? (
+          {visiblePrompts.length === 0 ? (
             <div className="empty-state prompt-empty">
-              <strong className="empty-title">{selectedScene ? "当前场景还没有 Prompt" : "暂无 Prompt"}</strong>
-              <p className="empty-copy">新建 Prompt 后会显示在这里。</p>
+              <strong className="empty-title">
+                {favoriteOnly ? "当前场景下还没有收藏任何 Prompt" : selectedScene ? "当前场景还没有 Prompt" : "暂无 Prompt"}
+              </strong>
+              <p className="empty-copy">{favoriteOnly ? "收藏 Prompt 后会显示在这里。" : "新建 Prompt 后会显示在这里。"}</p>
             </div>
           ) : (
             <div className="prompt-grid">
-              {prompts.map((item) => (
+              {visiblePrompts.map((item) => (
                 <PromptCard
                   key={item.prompt.id}
                   item={item}
