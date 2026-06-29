@@ -1,6 +1,6 @@
 # FH Prompt Manager
 
-> A local-first prompt manager for Chrome and Edge.
+> A frontend-only, local-first prompt manager for Chrome and Edge.
 
 [中文文档](README.md)
 
@@ -13,17 +13,13 @@ FH Prompt Manager is a lightweight browser extension for collecting, organizing,
 
 ## Preview
 
-> Screenshot placeholder: management page. Show the scene sidebar, prompt card grid, search bar, import/export actions, and a few real prompt examples.
->
-> Suggested path: `docs/assets/screenshots/manager-library.png`
+> ![Manager page preview](docs/assets/screenshots/manager-library.png)
 
-> Screenshot placeholder: prompt detail page. Show the editor, tags, highlights, version history, copy action, and image prompt preview if available.
+> ![Prompt detail preview](docs/assets/screenshots/prompt-detail.png)
 >
-> Suggested path: `docs/assets/screenshots/prompt-detail.png`
+> ![Prompt diff preview](docs/assets/screenshots/prompt-diff.png)
 
-> Screenshot placeholder: fast-use popup. Show quick search, recent prompts, scene filters, and one-click copy.
->
-> Suggested path: `docs/assets/screenshots/popup.png`
+> ![Fast Use popup preview](docs/assets/screenshots/popup.png)
 
 ## Why
 
