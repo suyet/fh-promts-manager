@@ -1,7 +1,10 @@
 # Local workflow state
+.agents/
 .superpowers/
+AGENTS.md
 
 # Generated outputs
+dist/
 output/
 *.log
 
@@ -18,10 +21,16 @@ env/
 
 # Frontend / tooling
 node_modules/
-dist/
 coverage/
 prototypes/
 docs/superpowers/
+.vite/
+.turbo/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Environment files
 .env
@@ -31,5 +40,7 @@ docs/superpowers/
 # Editors / OS
 .idea/
 .vscode/
+*.swp
+*.swo
 .DS_Store
 Thumbs.db
