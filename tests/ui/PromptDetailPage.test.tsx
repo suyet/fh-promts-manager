@@ -43,7 +43,7 @@ describe("PromptDetailPage", () => {
     expect(screen.getByRole("button", { name: "保存新版本" })).toHaveClass("bare-icon-btn");
     expect(screen.getByLabelText("取消收藏")).toHaveClass("favorite-active");
     expect(screen.getByRole("button", { name: "复制最新版本" }).previousElementSibling).toHaveClass("detail-action-divider");
-    expect(screen.getByText("场景：代码重构")).toHaveClass("detail-sub-meta-item");
+    expect(screen.getByLabelText("切换场景").closest(".detail-sub-meta-item")).toBeTruthy();
     expect(screen.getByText("更新于 2026/6/26")).toHaveClass("detail-sub-meta-item");
     expect(screen.getAllByText("v1").find((element) => element.classList.contains("version-pill"))).toBeTruthy();
     expect(await screen.findByText("提示词编辑器")).toBeInTheDocument();
@@ -120,7 +120,8 @@ describe("PromptDetailPage", () => {
     await user.tab();
     expect(onSaveMetadata).toHaveBeenCalledWith({
       title: "新标题",
-      favorite: true
+      favorite: true,
+      sceneId: "scene-code"
     });
 
     await user.clear(screen.getByLabelText("亮点"));
@@ -167,6 +168,63 @@ describe("PromptDetailPage", () => {
     expect(screen.getByLabelText("添加标签")).toHaveValue("1234567890");
     await user.keyboard("{Enter}");
     expect(screen.getByText("1234567890")).toBeInTheDocument();
+  });
+
+  it("lets users switch to another scene of the same prompt type from the detail header", async () => {
+    const user = userEvent.setup();
+    const onSaveMetadata = vi.fn();
+    const currentScene = sceneFactory();
+    const sameTypeScene = sceneFactory({
+      id: "scene-writing",
+      name: "写作",
+      description: "写作助手",
+      icon: "pen",
+      color: "green",
+      sortOrder: 2
+    });
+    const imageScene = sceneFactory({
+      id: "scene-image",
+      name: "生图场景",
+      promptType: "image",
+      icon: "image",
+      color: "orange",
+      sortOrder: 3
+    });
+
+    render(
+      <PromptDetailPage
+        item={{
+          prompt: promptFactory(),
+          latestVersion: versionFactory(),
+          scene: currentScene
+        }}
+        availableScenes={[currentScene, sameTypeScene, imageScene]}
+        versions={[versionFactory()]}
+        onBack={vi.fn()}
+        onCopyLatest={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveVersion={vi.fn()}
+        onSaveMetadata={onSaveMetadata}
+        onSaveLatestVersionMetadata={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onCopyEditor={vi.fn()}
+        onDownloadEditor={vi.fn()}
+        onCompareToLatest={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText("切换场景")).toHaveValue("scene-code");
+    expect(screen.getByRole("option", { name: "代码重构" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "写作" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "生图场景" })).toBeNull();
+
+    await user.selectOptions(screen.getByLabelText("切换场景"), "scene-writing");
+
+    expect(onSaveMetadata).toHaveBeenCalledWith({
+      title: "Code Refactor Helper",
+      favorite: true,
+      sceneId: "scene-writing"
+    });
   });
 
   it("shows the latest image and allows replacing it when saving an image prompt version", async () => {
@@ -336,9 +394,51 @@ describe("PromptDetailPage", () => {
     expect(screen.queryByText("Compare to Latest")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("复制版本")).not.toBeInTheDocument();
 
+    await user.click(rows[0]);
+    expect(screen.queryByRole("dialog", { name: "V5 版本预览" })).not.toBeInTheDocument();
+
     await user.click(screen.getAllByLabelText("与最新版本对比")[0]);
 
     expect(onCompareToLatest).toHaveBeenCalledWith("version-2");
+  });
+
+  it("opens text version previews without the image media column", async () => {
+    const user = userEvent.setup();
+    const latest = versionFactory({ id: "version-2", versionNumber: 2 });
+    const old = versionFactory({
+      id: "version-1",
+      versionNumber: 1,
+      content: "历史文本版本正文",
+      createdAt: "2026-01-21T00:00:00.000Z"
+    });
+
+    render(
+      <PromptDetailPage
+        item={{
+          prompt: promptFactory({ latestVersionId: "version-2", latestVersionNumber: 2 }),
+          latestVersion: latest,
+          scene: sceneFactory()
+        }}
+        versions={[latest, old]}
+        onBack={vi.fn()}
+        onCopyLatest={vi.fn()}
+        onDelete={vi.fn()}
+        onSaveVersion={vi.fn()}
+        onSaveMetadata={vi.fn()}
+        onSaveLatestVersionMetadata={vi.fn()}
+        onToggleFavorite={vi.fn()}
+        onCopyEditor={vi.fn()}
+        onDownloadEditor={vi.fn()}
+        onCompareToLatest={vi.fn()}
+        onCopyVersion={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByText("v1"));
+
+    expect(screen.getByRole("dialog", { name: "v1 版本预览" })).toBeInTheDocument();
+    expect(screen.getByText("历史文本版本正文").closest(".version-preview-body")).toHaveClass("text-only");
+    expect(document.querySelector(".version-preview-media")).toBeNull();
   });
 
   it("opens a read-only version preview modal with image and copy action", async () => {

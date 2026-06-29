@@ -40,7 +40,9 @@ export function VersionHistory({
                 className={isLatest ? "version-row current" : "version-row"}
                 data-testid="version-card"
                 key={version.id}
-                onClick={() => setPreviewVersion(version)}
+                onClick={() => {
+                  if (!isLatest) setPreviewVersion(version);
+                }}
               >
                 <div className="version-info">
                   <div className="version-head-line">
@@ -82,12 +84,12 @@ export function VersionHistory({
               <h2 id="version-preview-title">{previewLabel} 版本预览</h2>
               <IconButton className="bare-icon-btn" label="关闭" icon={<X className="icon" />} onClick={() => setPreviewVersion(null)} />
             </div>
-            <div className="version-preview-body">
-              <div className="version-preview-media">
-                {previewVersion.imageAssetId && (
+            <div className={previewVersion.imageAssetId ? "version-preview-body" : "version-preview-body text-only"}>
+              {previewVersion.imageAssetId && (
+                <div className="version-preview-media">
                   <ImageAssetPreview assetId={previewVersion.imageAssetId} alt={`${previewLabel} 图片`} className="version-preview-image" />
-                )}
-              </div>
+                </div>
+              )}
               <div className="version-preview-copy">
                 <pre className="version-preview-text">{previewVersion.content}</pre>
               </div>

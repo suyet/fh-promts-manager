@@ -54,14 +54,21 @@ export function TopBar({
               <IconButton label="关闭" icon={<X className="icon" />} onClick={() => setShowContact(false)} />
             </div>
             <div className="contact-lines">
-              <p className="contact-intro">完全离线的本地提示词管理插件(支持chrome/edge)</p>
+              <p className="contact-intro">开源的，完全离线的本地提示词管理插件(支持chrome/edge)</p>
               <p className="contact-subtitle">核心亮点：</p>
               <ul className="contact-features">
                 <li>🧩 三重颗粒度的提示词资产管理</li>
+                <li>🖼️ 支持问生图类型提示词、版本diff对比</li>
                 <li>🔒 本地优先，完全离线</li>
                 <li>📦 一键导入导出，团队共享</li>
               </ul>
-              <p className="contact-warning">提醒：删除插件数据不会保留，请提前导出备份</p>
+              <div className="contact-warning">
+                <p className="contact-warning-title">提醒：</p>
+                <ol className="contact-warning-list">
+                  <li>删除插件将<span className="contact-warning-danger">删除全部数据</span>，请提前导出备份</li>
+                  <li>请不要移动插件源文件的位置</li>
+                </ol>
+              </div>
               <p>👤 作者：烽火技服-姜萌</p>
               <p>📧 邮箱：mjiang@fiberhome.com</p>
             </div>

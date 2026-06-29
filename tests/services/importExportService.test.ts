@@ -249,4 +249,53 @@ describe("importExportService", () => {
     expect(importedAsset?.data.byteLength).toBe(asset.size);
     expect(importedVersions[0].imageAssetId).toBe(asset.id);
   });
+
+  it("imports usage records with merged prompt and version ids", async () => {
+    await repositories.scenes.put(sceneFactory());
+    await repositories.prompts.put(promptFactory({
+      id: "local-prompt",
+      latestVersionId: "local-version-1",
+      latestVersionNumber: 1
+    }));
+    await repositories.versions.put(versionFactory({
+      id: "local-version-1",
+      promptId: "local-prompt",
+      versionNumber: 1,
+      content: "本地版本"
+    }));
+
+    await importExportService.importAll({
+      schemaVersion: 2,
+      exportedAt: "2026-06-26T08:00:00.000Z",
+      scenes: [sceneFactory()],
+      prompts: [promptFactory({
+        id: "imported-prompt",
+        latestVersionId: "imported-version-2",
+        latestVersionNumber: 2
+      })],
+      versions: [versionFactory({
+        id: "imported-version-2",
+        promptId: "imported-prompt",
+        versionNumber: 2,
+        content: "导入后的最新版本"
+      })],
+      usageRecords: [{
+        id: "usage-imported",
+        promptId: "imported-prompt",
+        versionId: "imported-version-2",
+        usedAt: "2026-06-26T09:00:00.000Z",
+        source: "popup"
+      }]
+    });
+
+    const mergedPrompt = await repositories.prompts.get("local-prompt");
+    const [usageRecord] = await repositories.usageRecords.listRecent(10);
+
+    expect(usageRecord).toMatchObject({
+      id: "usage-imported",
+      promptId: "local-prompt",
+      versionId: mergedPrompt?.latestVersionId,
+      source: "popup"
+    });
+  });
 });

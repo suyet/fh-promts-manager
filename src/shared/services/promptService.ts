@@ -109,17 +109,57 @@ export const promptService = {
 
   async updatePrompt(
     promptId: string,
-    input: { title: string; favorite: boolean }
+    input: { title: string; favorite: boolean; sceneId?: string }
   ): Promise<Prompt> {
     const prompt = await repositories.prompts.get(promptId);
     if (!prompt) throw new Error("Prompt not found.");
+    const timestamp = now();
+    const nextSceneId = input.sceneId ?? prompt.sceneId;
+    if (nextSceneId === prompt.sceneId) {
+      const updated: Prompt = {
+        ...prompt,
+        title: input.title,
+        favorite: input.favorite,
+        updatedAt: timestamp
+      };
+      await repositories.prompts.put(updated);
+      return updated;
+    }
+
+    const [currentScene, targetScene, sourceScenePrompts, targetScenePrompts] = await Promise.all([
+      repositories.scenes.get(prompt.sceneId),
+      repositories.scenes.get(nextSceneId),
+      repositories.prompts.listByScene(prompt.sceneId),
+      repositories.prompts.listByScene(nextSceneId)
+    ]);
+    if (!currentScene || !targetScene) throw new Error("Scene not found.");
+    if (currentScene.promptType !== targetScene.promptType) {
+      throw new Error("Prompt 不能跨类型移动场景。");
+    }
+
     const updated: Prompt = {
       ...prompt,
+      sceneId: nextSceneId,
       title: input.title,
       favorite: input.favorite,
-      updatedAt: now()
+      sortOrder: targetScenePrompts.reduce((maximum, item) => Math.max(maximum, item.sortOrder), 0) + 1,
+      updatedAt: timestamp
     };
-    await repositories.prompts.put(updated);
+    const compactedSourcePrompts = sourceScenePrompts
+      .filter((item) => item.id !== promptId)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((item, index) => ({
+        ...item,
+        sortOrder: index + 1,
+        updatedAt: timestamp
+      }));
+
+    await db.transaction("rw", db.prompts, async () => {
+      await db.prompts.put(updated);
+      if (compactedSourcePrompts.length > 0) {
+        await db.prompts.bulkPut(compactedSourcePrompts);
+      }
+    });
     return updated;
   },
 

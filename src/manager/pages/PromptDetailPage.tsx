@@ -7,7 +7,7 @@ import { ImageAssetPreview } from "../../shared/components/ImageAssetPreview";
 import { FIELD_LIMITS } from "../../shared/constants";
 import { normalizePromptTags } from "../../shared/tagUtils";
 import { PromptWorkspace } from "../components/PromptWorkspace";
-import type { PromptTag, PromptVersion, PromptWithLatest } from "../../shared/types";
+import type { PromptTag, PromptVersion, PromptWithLatest, Scene } from "../../shared/types";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -16,6 +16,7 @@ function formatDate(value: string) {
 
 export function PromptDetailPage({
   item,
+  availableScenes,
   versions,
   onBack,
   onCopyLatest,
@@ -30,12 +31,13 @@ export function PromptDetailPage({
   onCopyVersion
 }: {
   item: PromptWithLatest;
+  availableScenes?: Scene[];
   versions: PromptVersion[];
   onBack: () => void;
   onCopyLatest: () => void;
   onDelete: () => void;
   onSaveVersion: (input: { content: string; description: string; tags: PromptTag[]; customVersionLabel?: string; imageFile?: File }) => void;
-  onSaveMetadata: (input: { title: string; favorite: boolean }) => void;
+  onSaveMetadata: (input: { title: string; favorite: boolean; sceneId: string }) => void;
   onSaveLatestVersionMetadata: (input: { description: string; tags: PromptTag[] }) => void;
   onToggleFavorite: () => void;
   onCopyEditor: (content: string) => void;
@@ -45,6 +47,7 @@ export function PromptDetailPage({
 }) {
   const [content, setContent] = useState(item.latestVersion.content);
   const [title, setTitle] = useState(item.prompt.title);
+  const [sceneId, setSceneId] = useState(item.scene.id);
   const [description, setDescription] = useState(item.latestVersion.description);
   const [tags, setTags] = useState<PromptTag[]>(normalizePromptTags(item.latestVersion.tags));
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -54,10 +57,12 @@ export function PromptDetailPage({
   const hasUnsavedChanges = content !== item.latestVersion.content;
   const displayVersionLabel = item.latestVersion.customVersionLabel || `v${item.prompt.latestVersionNumber}`;
   const isImagePrompt = item.scene.promptType === "image";
+  const sceneOptions = (availableScenes ?? [item.scene]).filter((scene) => scene.promptType === item.scene.promptType);
 
   useEffect(() => {
     setContent(item.latestVersion.content);
     setTitle(item.prompt.title);
+    setSceneId(item.scene.id);
     setDescription(item.latestVersion.description);
     setTags(normalizePromptTags(item.latestVersion.tags));
     setVersionLabel(`v${item.prompt.latestVersionNumber + 1}`);
@@ -71,12 +76,14 @@ export function PromptDetailPage({
     onBack();
   }
 
-  function saveMetadata(next: { title?: string; favorite?: boolean }) {
+  function saveMetadata(next: { title?: string; favorite?: boolean; sceneId?: string }) {
     const nextTitle = next.title ?? title;
     const nextFavorite = next.favorite ?? item.prompt.favorite;
+    const nextSceneId = next.sceneId ?? sceneId;
     onSaveMetadata({
       title: nextTitle.trim(),
-      favorite: nextFavorite
+      favorite: nextFavorite,
+      sceneId: nextSceneId
     });
   }
 
@@ -153,7 +160,22 @@ export function PromptDetailPage({
             )}
             <span className="version-pill">{displayVersionLabel}</span>
             <div className="detail-sub-meta">
-              <span className="detail-sub-meta-item">场景：{item.scene.name}</span>
+              <label className="detail-sub-meta-item detail-scene-select">
+                <span>场景：</span>
+                <select
+                  aria-label="切换场景"
+                  value={sceneId}
+                  onChange={(event) => {
+                    const nextSceneId = event.target.value;
+                    setSceneId(nextSceneId);
+                    saveMetadata({ sceneId: nextSceneId });
+                  }}
+                >
+                  {sceneOptions.map((scene) => (
+                    <option key={scene.id} value={scene.id}>{scene.name}</option>
+                  ))}
+                </select>
+              </label>
               <span className="detail-sub-meta-item">类型：{isImagePrompt ? "生图" : "文本"}</span>
               <span className="detail-sub-meta-item">更新于 {formatDate(item.prompt.updatedAt)}</span>
             </div>

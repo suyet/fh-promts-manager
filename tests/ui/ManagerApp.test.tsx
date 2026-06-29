@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import JSZip from "jszip";
 import { ManagerApp } from "../../src/manager/ManagerApp";
+import { IMAGE_LIMITS } from "../../src/shared/constants";
 import { resetDatabase } from "../../src/shared/data/db";
 import { repositories } from "../../src/shared/data/repositories";
-import { promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
+import { promptService } from "../../src/shared/services/promptService";
+import { imageAssetFactory, promptFactory, sceneFactory, versionFactory } from "../../src/test/factories";
 
 describe("ManagerApp", () => {
   beforeEach(async () => {
@@ -96,6 +98,26 @@ describe("ManagerApp", () => {
     });
   });
 
+  it("shows image validation errors when creating an image prompt", async () => {
+    const user = userEvent.setup();
+    await repositories.scenes.put(sceneFactory({ promptType: "image", icon: "image", name: "生图场景" }));
+
+    render(<ManagerApp />);
+
+    await screen.findByRole("heading", { name: "生图场景" });
+    await user.click(screen.getByRole("button", { name: "新建" }));
+    await user.type(await screen.findByLabelText("Prompt 标题"), "图片 Prompt");
+    await user.type(screen.getByLabelText("提示词正文"), "生成一张产品图");
+    await user.upload(
+      screen.getByLabelText("上传封面图片"),
+      new File([new Uint8Array(IMAGE_LIMITS.maxImageBytes + 1)], "large.png", { type: "image/png" })
+    );
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("图片不能超过 10MB。");
+    await expect(repositories.prompts.list()).resolves.toEqual([]);
+  });
+
   it("toggles favorite and copies the latest version from prompt cards", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);
@@ -120,6 +142,7 @@ describe("ManagerApp", () => {
   });
 
   it("keeps scene prompt counts based on all prompts while filtering the active scene", async () => {
+    const searchSpy = vi.spyOn(promptService, "searchPrompts");
     await repositories.scenes.bulkPut([
       sceneFactory(),
       sceneFactory({ id: "scene-writing", name: "写作", description: "写作助手", icon: "pen", color: "green", sortOrder: 2 })
@@ -138,6 +161,7 @@ describe("ManagerApp", () => {
     expect(await screen.findByTestId("scene-card-scene-code")).toHaveTextContent("1 个提示词");
     expect(screen.getByTestId("scene-card-scene-writing")).toHaveTextContent("1 个提示词");
     await waitFor(() => expect(screen.queryByText("写作 Prompt")).not.toBeInTheDocument());
+    expect(searchSpy.mock.calls.every(([query]) => query.sceneId === "scene-code")).toBe(true);
   });
 
   it("saves user-defined prompt card order", async () => {
@@ -294,6 +318,55 @@ describe("ManagerApp", () => {
     await waitFor(async () => {
       expect(await repositories.prompts.get("prompt-refactor")).toBeUndefined();
       expect(await repositories.versions.listByPrompt("prompt-refactor")).toEqual([]);
+    });
+  });
+
+  it("moves a prompt to another same-type scene from detail and keeps the moved prompt visible", async () => {
+    const user = userEvent.setup();
+    await repositories.scenes.bulkPut([
+      sceneFactory(),
+      sceneFactory({ id: "scene-writing", name: "写作", description: "写作助手", icon: "pen", color: "green", sortOrder: 2 }),
+      sceneFactory({ id: "scene-image", name: "生图场景", promptType: "image", icon: "image", color: "orange", sortOrder: 3 })
+    ]);
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory());
+
+    render(<ManagerApp />);
+
+    await user.click(await screen.findByText("Code Refactor Helper"));
+    expect(await screen.findByRole("heading", { name: "Code Refactor Helper" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "生图场景" })).toBeNull();
+
+    await user.selectOptions(screen.getByLabelText("切换场景"), "scene-writing");
+
+    await waitFor(async () => {
+      expect((await repositories.prompts.get("prompt-refactor"))?.sceneId).toBe("scene-writing");
+    });
+    expect(screen.getByRole("heading", { name: "Code Refactor Helper" })).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("返回"));
+
+    expect(await screen.findByRole("heading", { name: "写作" })).toBeInTheDocument();
+    expect(screen.getByText("Code Refactor Helper")).toBeInTheDocument();
+  });
+
+  it("deletes image assets when deleting an image scene", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    await repositories.scenes.put(sceneFactory({ promptType: "image", icon: "image", name: "生图场景" }));
+    await repositories.imageAssets.put(imageAssetFactory());
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory({ imageAssetId: "asset-cover" }));
+
+    render(<ManagerApp />);
+
+    await screen.findByRole("heading", { name: "生图场景" });
+    await user.click(screen.getByLabelText("更多操作：生图场景"));
+    await user.click(screen.getByRole("menuitem", { name: "删除" }));
+
+    await waitFor(async () => {
+      await expect(repositories.imageAssets.get("asset-cover")).resolves.toBeUndefined();
+      await expect(repositories.prompts.get("prompt-refactor")).resolves.toBeUndefined();
     });
   });
 

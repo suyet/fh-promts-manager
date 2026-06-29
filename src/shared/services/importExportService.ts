@@ -12,6 +12,7 @@ import type {
   Prompt,
   PromptVersion,
   Scene,
+  UsageRecord,
   ZipBackupManifest
 } from "../types";
 
@@ -277,6 +278,7 @@ export const importExportService = {
       const existingVersions = await db.versions.toArray();
       const { versionIdMap, versionsToAdd } = buildVersionIdMap(payload.versions, promptIdMap, existingVersions);
       const promptsToPut: Prompt[] = [];
+      const usageRecordsToPut: UsageRecord[] = [];
 
       for (const importedPrompt of payload.prompts) {
         const mappedSceneId = sceneIdMap.get(importedPrompt.sceneId) || importedPrompt.sceneId;
@@ -305,8 +307,20 @@ export const importExportService = {
         });
       }
 
+      for (const importedUsageRecord of payload.usageRecords) {
+        const promptId = promptIdMap.get(importedUsageRecord.promptId);
+        const versionId = versionIdMap.get(importedUsageRecord.versionId);
+        if (!promptId || !versionId) continue;
+        usageRecordsToPut.push({
+          ...importedUsageRecord,
+          promptId,
+          versionId
+        });
+      }
+
       await db.versions.bulkPut(versionsToAdd);
       await db.prompts.bulkPut(promptsToPut);
+      await db.usageRecords.bulkPut(usageRecordsToPut);
     });
     return preview;
   },

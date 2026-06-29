@@ -172,6 +172,82 @@ describe("promptService", () => {
     await expect(repositories.versions.listByPrompt("prompt-refactor")).resolves.toHaveLength(1);
   });
 
+  it("moves a prompt into another scene of the same type and compacts source ordering", async () => {
+    await repositories.scenes.bulkPut([
+      sceneFactory(),
+      sceneFactory({ id: "scene-writing", name: "写作", description: "写作助手", icon: "pen", color: "green", sortOrder: 2 })
+    ]);
+    await repositories.prompts.bulkPut([
+      promptFactory({
+        id: "prompt-first",
+        sceneId: "scene-code",
+        title: "First Prompt",
+        latestVersionId: "version-first",
+        sortOrder: 1
+      }),
+      promptFactory({
+        id: "prompt-second",
+        sceneId: "scene-code",
+        title: "Second Prompt",
+        latestVersionId: "version-second",
+        sortOrder: 2
+      }),
+      promptFactory({
+        id: "prompt-third",
+        sceneId: "scene-writing",
+        title: "Third Prompt",
+        latestVersionId: "version-third",
+        sortOrder: 1
+      })
+    ]);
+    await repositories.versions.bulkPut([
+      versionFactory({ id: "version-first", promptId: "prompt-first" }),
+      versionFactory({ id: "version-second", promptId: "prompt-second" }),
+      versionFactory({ id: "version-third", promptId: "prompt-third" })
+    ]);
+
+    const updated = await promptService.updatePrompt("prompt-first", {
+      title: "First Prompt",
+      favorite: true,
+      sceneId: "scene-writing"
+    });
+
+    expect(updated).toMatchObject({
+      sceneId: "scene-writing",
+      sortOrder: 2,
+      updatedAt: "2026-06-26T08:00:00.000Z"
+    });
+    await expect(repositories.prompts.get("prompt-second")).resolves.toMatchObject({
+      sceneId: "scene-code",
+      sortOrder: 1,
+      updatedAt: "2026-06-26T08:00:00.000Z"
+    });
+    await expect(repositories.prompts.get("prompt-third")).resolves.toMatchObject({
+      sceneId: "scene-writing",
+      sortOrder: 1
+    });
+  });
+
+  it("rejects moving a prompt into a scene of a different type", async () => {
+    await repositories.scenes.bulkPut([
+      sceneFactory(),
+      sceneFactory({ id: "scene-image", name: "生图场景", promptType: "image", icon: "image", color: "orange", sortOrder: 2 })
+    ]);
+    await repositories.prompts.put(promptFactory());
+    await repositories.versions.put(versionFactory());
+
+    await expect(promptService.updatePrompt("prompt-refactor", {
+      title: "Updated title",
+      favorite: true,
+      sceneId: "scene-image"
+    })).rejects.toThrow("Prompt 不能跨类型移动场景。");
+
+    await expect(repositories.prompts.get("prompt-refactor")).resolves.toMatchObject({
+      sceneId: "scene-code",
+      sortOrder: 1
+    });
+  });
+
   it("updates the latest version highlight and tags for auto-save", async () => {
     await repositories.scenes.put(sceneFactory());
     await repositories.prompts.put(promptFactory());
