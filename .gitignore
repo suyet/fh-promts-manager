@@ -20,6 +20,8 @@ env/
 node_modules/
 dist/
 coverage/
+prototypes/
+docs/superpowers/
 
 # Environment files
 .env
